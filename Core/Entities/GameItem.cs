@@ -1,3 +1,12 @@
+/**
+ * Name: John Deardorff
+ * Date: 06/03/26
+ * Project ARDO
+ *
+ * Class description:
+ * `GameItem.cs` is a concrete base item model used by inventory, combat, 
+    and shop systems. It exposes item properties and constructors.
+ */
 using ARDO.Core.Enums;
 
 namespace ARDO.Core.Entities

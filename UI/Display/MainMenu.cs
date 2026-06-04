@@ -1,3 +1,13 @@
+/**
+ * Name: John Deardorff
+ * Date: 06/03/26
+ * Project ARDO
+ *
+ * Class description:
+ * `MainMenu.cs` is a concrete menu controller that manages new-game, load-game, 
+    and exit flow from the start screen. It uses stateful methods and repository 
+    calls to create or load profiles, while CRUD stays in the data layer.
+ */
 using System;
 using System.Data;
 using ARDO.Core.Abstracts;
@@ -161,6 +171,7 @@ namespace ARDO.UI.Display
         {
             if (choice == "0")
             {
+                _form.AppendNarrative("\nReturning to the main menu.");
                 Show();
                 return;
             }

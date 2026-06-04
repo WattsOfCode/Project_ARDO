@@ -1,3 +1,12 @@
+/**
+ * Name: John Deardorff
+ * Date: 06/03/26
+ * Project ARDO
+ *
+ * Class description:
+ * `CharacterPanel.cs` is a concrete WinForms control that shows hero and enemy 
+    portraits or ASCII art. It uses private UI fields and public display methods.
+ */
 using System;
 using System.Drawing;
 using System.Windows.Forms;

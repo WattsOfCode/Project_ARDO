@@ -1,3 +1,12 @@
+/**
+ * Name: John Deardorff
+ * Date: 06/03/26
+ * Project ARDO
+ *
+ * Class description:
+ * `EnemyType.cs` is an enum file that classifies enemy variants for factories 
+    and quest data.
+ */
 using System;
 using System.Collections.Generic;
 using System.Linq;

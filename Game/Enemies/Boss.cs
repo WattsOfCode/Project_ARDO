@@ -1,3 +1,13 @@
+/**
+ * Name: John Deardorff
+ * Date: 06/03/26
+ * Project ARDO
+ *
+ * Class description:
+ * `Boss.cs` is a concrete enemy subclass that adds enraged boss behavior to the 
+    polymorphic combat system. It overrides enemy methods, uses constructors 
+    for stats.
+ */
 using ARDO.Core.Abstracts;
 using ARDO.Core.Interfaces;
 
@@ -9,8 +19,7 @@ namespace ARDO.Game.Enemies
 
         public Boss(string name, int hp, int damage) 
             : base(name, hp, damage, 200, 150)
-        {
-        }
+        { }
 
         public override void ExecuteAI(ICombatant target)
         {

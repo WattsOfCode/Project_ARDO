@@ -1,3 +1,13 @@
+/**
+ * Name: John Deardorff
+ * Date: 06/03/26
+ * Project ARDO
+ *
+ * Class description:
+ * `EquipmentManager.cs` is a concrete composition helper that equips and unequips 
+    items for the hero. It uses public methods to modify combat stats through 
+    composition.
+ */
 using ARDO.Core.Entities;
 
 namespace ARDO.Game.Inventory

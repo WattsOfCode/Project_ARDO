@@ -1,3 +1,12 @@
+/**
+ * Name: John Deardorff
+ * Date: 06/03/26
+ * Project ARDO
+ *
+ * Class description:
+ * `Armor.cs` is a concrete item subclass that adds defense bonuses and an 
+    equipment slot. It uses constructors and inherited properties.
+ */
 using ARDO.Core.Enums;
 
 namespace ARDO.Core.Entities

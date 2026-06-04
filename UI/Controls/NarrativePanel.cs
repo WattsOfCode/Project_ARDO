@@ -1,3 +1,13 @@
+/**
+ * Name: John Deardorff
+ * Date: 06/03/26
+ * Project ARDO
+ *
+ * Class description:
+ * `NarrativePanel.cs` is a concrete WinForms control that displays scrolling 
+    story text and command feedback. It uses private UI fields and helper 
+    methods only.
+ */
 using System.Drawing;
 using System.Windows.Forms;
 

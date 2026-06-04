@@ -1,3 +1,14 @@
+/**
+ * Name: John Deardorff
+ * Date: 06/03/26
+ * Project ARDO
+ *
+ * Class description:
+ * `GameStateManager.cs` is a concrete game-flow controller that manages town, 
+    combat, defeat, and game-over states. It coordinates public methods, 
+    constructors, and state transitions while delegating CRUD to repository 
+    classes.
+ */
 using System;
 using System.Collections.Generic;
 using ARDO.Core.Abstracts;
@@ -7,6 +18,7 @@ using ARDO.Data.SQLite;
 using ARDO.Game.Combat;
 using ARDO.Game.Inventory;
 using ARDO.Game.Enemies;
+using ARDO.UI.Controls;
 using ARDO.UI.Forms;
 
 namespace ARDO.Game
@@ -18,9 +30,8 @@ namespace ARDO.Game
         private readonly PlayerRepository _playerRepo;
         private readonly QuestRepository _questRepo;
         private readonly CombatEngine _combatEngine;
-        private readonly List<GameItem> _recentLoot = new();
-        private bool _shopOpen;
         private int _encountersRemainingInRun;
+        private bool _townShopOpen;
 
         public GameState CurrentState { get; private set; } = GameState.Town;
 
@@ -71,7 +82,6 @@ namespace ARDO.Game
         public void EnterTown()
         {
             CurrentState = GameState.Town;
-            _shopOpen = false;
             _encountersRemainingInRun = 0;
 
             _ui.ShowPlayer(_hero);
@@ -147,12 +157,6 @@ namespace ARDO.Game
 
         private void ProcessTownCommand(string command)
         {
-            if (_shopOpen)
-            {
-                ProcessShopCommand(command);
-                return;
-            }
-
             bool showTownMenu = true;
 
             switch (command)
@@ -160,10 +164,8 @@ namespace ARDO.Game
                 case "1":
                 case "buy":
                 case "shop":
-                    _shopOpen = true;
-                    ShowShopMenu();
-                    showTownMenu = false;
-                    break;
+                    OpenTownShop();
+                    return;
 
                 case "2":
                 case "rest":
@@ -182,78 +184,23 @@ namespace ARDO.Game
                     _playerRepo.SaveGameState(_hero, _hero.ActiveStoryNode);
                     _ui.AppendNarrative("[SYSTEM] Game state saved to SQLite.");
                     _ui.AppendNarrative("");
-                    _ui.ReturnToMainMenu();
                     return;
 
                 case "5":
-                case "loot":
-                case "inventory":
-                    ShowLootInventory();
-                    break;
+                case "exit":
+                case "mainmenu":
+                case "menu":
+                    _ui.AppendNarrative("");
+                    _ui.AppendNarrative("You leave Oakhaven and return to the main menu.");
+                    _ui.ReturnToMainMenu();
+                    return;
 
                 default:
-                    _ui.AppendNarrative("Unknown town command. Available options: 1 buy, 2 rest, 3 dungeon, 4 save, 5 loot.");
+                    _ui.AppendNarrative("Unknown town command. Check the input panel for the available actions.");
                     break;
             }
 
             if (CurrentState == GameState.Town && showTownMenu)
-            {
-                _ui.AppendNarrative("");
-                ShowTownMenu();
-            }
-        }
-
-        private void ProcessShopCommand(string command)
-        {
-            switch (command)
-            {
-                case "1":
-                case "weapon":
-                    PurchaseShopItem(
-                        40,
-                        new Weapon("Iron Blade", "A sturdy blade from the Oakhaven merchant.", RarityType.Common, 40, 10),
-                        "The merchant sharpens your edge. Attack rises by 10.",
-                        () => _hero.WeaponBonusDamage += 10);
-                    break;
-
-                case "2":
-                case "armor":
-                    PurchaseShopItem(
-                        30,
-                        new Armor("Reinforced Mail", "Armor fit for the next descent.", RarityType.Common, 30, 5, EquipmentSlot.Chest),
-                        "Your armor is reinforced. Defense rises by 5.",
-                        () => _hero.ShieldBonusDefense += 5);
-                    break;
-
-                case "3":
-                case "tonic":
-                case "potion":
-                    PurchaseShopItem(
-                        50,
-                        new Consumable("Tonic of Hardening", "A one-time draught that steadies the body.", RarityType.Common, 50, 25),
-                        "You buy a tonic of hardening. Invulnerability charges rise by 2.",
-                        () => _hero.InvulnerabilityCharges += 2);
-                    break;
-
-                case "4":
-                case "back":
-                    _shopOpen = false;
-                    _ui.AppendNarrative("You step away from the merchant and return to the town square.");
-                    break;
-
-                default:
-                    _ui.AppendNarrative("Invalid shop choice. Available options: 1 weapon, 2 armor, 3 tonic, 4 back.");
-                    return;
-            }
-
-            _ui.UpdateVisualMetricsDisplay();
-            _playerRepo.SaveGameState(_hero, _hero.ActiveStoryNode);
-
-            if (_shopOpen)
-            {
-                ShowShopMenu();
-            }
-            else
             {
                 _ui.AppendNarrative("");
                 ShowTownMenu();
@@ -314,7 +261,6 @@ namespace ARDO.Game
                 _ui.AppendNarrative("");
                 _hero.HeroInventory.AddItem(loot);
                 _playerRepo.SaveInventoryItem(_hero.CharacterId, loot);
-                _recentLoot.Add(loot);
                 _ui.AppendNarrative($"Loot acquired: {loot.Name}");
             }
 
@@ -352,61 +298,32 @@ namespace ARDO.Game
 
         private void ShowTownMenu()
         {
+            _ui.SetCommandContext("Town commands: 1 buy from shop, 2 rest at inn, 3 enter dungeon, 4 save, 5 exit.");
             _ui.AppendNarrative("");
-            _ui.AppendNarrative("Town options:");
-            _ui.AppendNarrative("1. Buy supplies");
-            _ui.AppendNarrative("2. Rest at the inn");
-            _ui.AppendNarrative("3. Return to the dungeon");
-            _ui.AppendNarrative("4. Save game");
-            _ui.AppendNarrative("5. View loot and inventory");
-            _ui.AppendNarrative("Type 1 / buy / shop, 2 / rest, 3 / dungeon / return, 4 / save, or 5 / loot / inventory:");
+            _ui.AppendNarrative("Oakhaven settles around you. The merchant waits nearby, the inn is warm, and the dungeon still looms below.");
+            _ui.AppendNarrative("Choose your next action using the input panel below.");
         }
 
-        private void ShowShopMenu()
+        private void OpenTownShop()
         {
-            _ui.AppendNarrative("");
-            _ui.AppendNarrative("Merchant stock:");
-            _ui.AppendNarrative("1. Sharpen weapon - 40 gold");
-            _ui.AppendNarrative("2. Reinforce armor - 30 gold");
-            _ui.AppendNarrative("3. Buy tonic - 50 gold");
-            _ui.AppendNarrative("4. Back to town");
-            _ui.AppendNarrative("Type 1 / weapon, 2 / armor, 3 / tonic, or 4 / back:");
-        }
+            if (_townShopOpen)
+                return;
 
-        private void ShowLootInventory()
-        {
-            _ui.AppendNarrative("");
-            _ui.AppendNarrative("Loot and inventory:");
-
-            if (_recentLoot.Count > 0)
+            _townShopOpen = true;
+            var shopPanel = new ShopPanel(_hero, _playerRepo, _ui.UpdateVisualMetricsDisplay);
+            shopPanel.CloseRequested += (_, __) =>
             {
-                _ui.AppendNarrative("Recent loot:");
-                for (int i = 0; i < _recentLoot.Count; i++)
-                {
-                    GameItem item = _recentLoot[i];
-                    _ui.AppendNarrative($"  {i + 1}. {item}");
-                }
+                _townShopOpen = false;
+                _ui.RestoreNarrativePanel();
+                _ui.UpdateVisualMetricsDisplay();
                 _ui.AppendNarrative("");
-            }
+                _ui.AppendNarrative("You return from the town shop and step back into Oakhaven.");
+                ShowTownMenu();
+                _ui.FocusCommandInput();
+            };
 
-            List<GameItem> items = _hero.HeroInventory.GetItems();
-            if (items.Count == 0)
-            {
-                _ui.AppendNarrative("Your pack is empty.");
-            }
-            else
-            {
-                for (int i = 0; i < items.Count; i++)
-                {
-                    GameItem item = items[i];
-                    string equipped = item.IsEquipped ? " [equipped]" : string.Empty;
-                    string consumable = item.ItemType == ItemType.Consumable ? $" [consumable: {item.HealAmount} heal]" : string.Empty;
-                    _ui.AppendNarrative($"  {i + 1}. {item.Name}{equipped}{consumable}");
-                }
-            }
-
-            _ui.AppendNarrative("");
-            _ui.AppendNarrative("Type 1 / buy / shop, 2 / rest, 3 / dungeon / return, 4 / save, or 5 / loot / inventory:");
+            _ui.ShowShopOverlay(shopPanel);
+            _ui.FocusCommandInput();
         }
 
         private void RestAtTown()
@@ -530,22 +447,5 @@ namespace ARDO.Game
             _ui.ReturnToMainMenu();
         }
 
-        private void PurchaseShopItem(int cost, GameItem item, string successMessage, Action upgradeAction)
-        {
-            if (_hero.Gold < cost)
-            {
-                _ui.AppendNarrative("You do not have enough gold for that purchase.");
-                return;
-            }
-
-            _hero.Gold -= cost;
-            _hero.HeroInventory.AddItem(item);
-            _playerRepo.SaveInventoryItem(_hero.CharacterId, item);
-            upgradeAction();
-            _ui.AppendNarrative("");
-            _ui.AppendNarrative(successMessage);
-            _ui.AppendNarrative($"Added to inventory: {item.Name}");
-            _playerRepo.SaveGameState(_hero, _hero.ActiveStoryNode);
-        }
     }
 }

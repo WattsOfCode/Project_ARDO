@@ -1,3 +1,13 @@
+/**
+ * Name: John Deardorff
+ * Date: 06/03/26
+ * Project ARDO
+ *
+ * Class description:
+ * `StoryEngine.cs` is a concrete story coordinator that connects quest beats 
+    to combat encounters and town progression. It uses constructor injection 
+    and public flow methods.
+ */
 using System;
 using ARDO.Core.Abstracts;
 using ARDO.Data.SQLite;

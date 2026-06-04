@@ -1,3 +1,12 @@
+/**
+ * Name: John Deardorff
+ * Date: 06/03/26
+ * Project ARDO
+ *
+ * Class description:
+ * `Program.cs` is the application entry point and a concrete bootstrap file for the 
+    WinForms app. It contains the static `Main` method.
+ */
 using System;
 using System.Windows.Forms;
 using ARDO.Data.SQLite;

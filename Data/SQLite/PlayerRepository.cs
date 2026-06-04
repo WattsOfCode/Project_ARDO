@@ -1,3 +1,14 @@
+/**
+ * Name: John Deardorff
+ * Date: 06/03/26
+ * Project ARDO
+ *
+ * Class description:
+ * `PlayerRepository.cs` is a concrete SQLite repository that creates, reads, 
+    updates, and deletes player profiles and game state. It uses constructors 
+    and public CRUD methods to manage character progression, inventory, 
+    and story persistence.
+ */
 using System;
 using System.Data;
 using System.IO;

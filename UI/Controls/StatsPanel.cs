@@ -1,3 +1,12 @@
+/**
+ * Name: John Deardorff
+ * Date: 06/03/26
+ * Project ARDO
+ *
+ * Class description:
+ * `StatsPanel.cs` is a concrete WinForms control that displays the active hero's health, 
+    mana, XP, level, and gold. It uses private UI fields and public update methods.
+ */
 using System.Drawing;
 using System.Windows.Forms;
 

@@ -1,3 +1,13 @@
+/**
+ * Name: John Deardorff
+ * Date: 06/03/26
+ * Project ARDO
+ *
+ * Class description:
+ * `StartMenuForm.cs` is a concrete WinForms screen that handles the title menu and 
+    launches new or loaded sessions. It uses private UI fields, constructors, and 
+    event-driven methods to route input.
+ */
 using System;
 using System.Drawing;
 using System.Windows.Forms;

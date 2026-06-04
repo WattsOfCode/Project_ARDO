@@ -1,3 +1,14 @@
+/**
+ * Name: John Deardorff
+ * Date: 06/03/26
+ * Project ARDO
+ *
+ * Class description:
+ * `MainGameForm.cs` is a concrete WinForms host that coordinates the narrative, 
+    stats, input, character, and shop overlay panels. It uses a constructor and 
+    public methods to manage composition and command routing, while CRUD is 
+    delegated to repository classes.
+ */
 using System;
 using System.Drawing;
 using System.Windows.Forms;
@@ -17,7 +28,9 @@ namespace ARDO.UI.Forms
         private readonly GameLaunchMode _launchMode;
 
         private Panel _gameShell = null!;
+        private Panel _storyHost = null!;
         private NarrativePanel _narrativePanel = null!;
+        private ShopPanel? _shopPanel;
         private CharacterPanel _characterPanel = null!;
         private InputPanel _inputPanel = null!;
         private StatsPanel _statsPanel = null!;
@@ -68,6 +81,12 @@ namespace ARDO.UI.Forms
             mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 75F));
             mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
 
+            _storyHost = new Panel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = Color.Black
+            };
+
             _narrativePanel = new NarrativePanel();
             _characterPanel = new CharacterPanel();
             _inputPanel = new InputPanel();
@@ -75,7 +94,8 @@ namespace ARDO.UI.Forms
 
             _inputPanel.CommandSubmitted += HandleCommand;
 
-            mainLayout.Controls.Add(_narrativePanel, 0, 0);
+            _storyHost.Controls.Add(_narrativePanel);
+            mainLayout.Controls.Add(_storyHost, 0, 0);
             mainLayout.Controls.Add(_characterPanel, 1, 0);
             mainLayout.Controls.Add(_inputPanel, 0, 1);
             mainLayout.Controls.Add(_statsPanel, 1, 1);
@@ -90,6 +110,12 @@ namespace ARDO.UI.Forms
                 return;
 
             string normalized = command.Trim();
+
+            if (_shopPanel != null)
+            {
+                _shopPanel.ProcessCommand(normalized);
+                return;
+            }
 
             if (normalized.Equals("gg", StringComparison.OrdinalIgnoreCase))
             {
@@ -193,8 +219,52 @@ namespace ARDO.UI.Forms
             _inputPanel.FocusInput();
         }
 
+        public void SetCommandContext(string message)
+        {
+            _inputPanel.SetContextMessage(message);
+        }
+
+        public void ShowShopOverlay(ShopPanel shopPanel)
+        {
+            if (shopPanel == null)
+                throw new ArgumentNullException(nameof(shopPanel));
+
+            if (_shopPanel != null)
+            {
+                _storyHost.Controls.Remove(_shopPanel);
+                _shopPanel.Dispose();
+            }
+
+            _shopPanel = shopPanel;
+            _storyHost.Controls.Remove(_narrativePanel);
+            _storyHost.Controls.Add(_shopPanel);
+            _shopPanel.BringToFront();
+            SetCommandContext("Shop commands: buy 1, sell 1, sell all, exit.");
+            FocusCommandInput();
+        }
+
+        public void RestoreNarrativePanel()
+        {
+            if (_shopPanel == null)
+                return;
+
+            _storyHost.Controls.Remove(_shopPanel);
+            _shopPanel.Dispose();
+            _shopPanel = null;
+
+            if (!_storyHost.Controls.Contains(_narrativePanel))
+            {
+                _storyHost.Controls.Add(_narrativePanel);
+                _narrativePanel.Dock = DockStyle.Fill;
+                _narrativePanel.BringToFront();
+            }
+
+            SetCommandContext("Type a command and press Enter.");
+        }
+
         public void ReturnToMainMenu()
         {
+            RestoreNarrativePanel();
             _activeHero = null;
             _gameState = null;
             _gameShell.Visible = false;

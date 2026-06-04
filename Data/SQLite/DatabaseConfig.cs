@@ -1,3 +1,13 @@
+/**
+ * Name: John Deardorff
+ * Date: 06/03/26
+ * Project ARDO
+ *
+ * Class description:
+ * `DatabaseConfig.cs` is a concrete database bootstrapper that creates the 
+    SQLite schema and seeds default data. It exposes setup methods only, 
+    while CRUD support is handled by repository classes.
+ */
 using Microsoft.Data.Sqlite;
 using System;
 

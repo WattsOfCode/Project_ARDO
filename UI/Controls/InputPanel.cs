@@ -1,3 +1,13 @@
+/**
+ * Name: John Deardorff
+ * Date: 06/03/26
+ * Project ARDO
+ *
+ * Class description:
+ * `InputPanel.cs` is a concrete WinForms control that collects player commands 
+    and sends them through an event. It uses private UI fields, constructors, 
+    and event handlers.
+ */
 using System;
 using System.Drawing;
 using System.Windows.Forms;
@@ -6,6 +16,7 @@ namespace ARDO.UI.Controls
 {
     public partial class InputPanel : UserControl
     {
+        private Label _contextLabel = null!;
         private TextBox _commandInput = null!;
         private Button _submitButton = null!;
 
@@ -26,7 +37,7 @@ namespace ARDO.UI.Controls
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 2,
-                RowCount = 1
+                RowCount = 2
             };
 
             layout.ColumnStyles.Add(
@@ -36,7 +47,21 @@ namespace ARDO.UI.Controls
                 new ColumnStyle(SizeType.Percent, 13F));
 
             layout.RowStyles.Add(
+                new RowStyle(SizeType.Absolute, 22F));
+
+            layout.RowStyles.Add(
                 new RowStyle(SizeType.Absolute, 42F));
+
+            _contextLabel = new Label
+            {
+                Dock = DockStyle.Fill,
+                Text = "Type a command and press Enter.",
+                ForeColor = Color.LightGray,
+                BackColor = Color.Black,
+                Font = new Font("Consolas", 9, FontStyle.Regular),
+                TextAlign = ContentAlignment.MiddleLeft,
+                Margin = new Padding(0)
+            };
 
             _commandInput = new TextBox
             {
@@ -74,8 +99,10 @@ namespace ARDO.UI.Controls
 
             _submitButton.Click += SubmitCommand;
 
-            layout.Controls.Add(_commandInput, 0, 0);
-            layout.Controls.Add(_submitButton, 1, 0);
+            layout.SetColumnSpan(_contextLabel, 2);
+            layout.Controls.Add(_contextLabel, 0, 0);
+            layout.Controls.Add(_commandInput, 0, 1);
+            layout.Controls.Add(_submitButton, 1, 1);
 
             Controls.Add(layout);
         }
@@ -104,6 +131,13 @@ namespace ARDO.UI.Controls
         public void FocusInput()
         {
             _commandInput.Focus();
+        }
+
+        public void SetContextMessage(string message)
+        {
+            _contextLabel.Text = string.IsNullOrWhiteSpace(message)
+                ? "Type a command and press Enter."
+                : message.Trim();
         }
     }
 }

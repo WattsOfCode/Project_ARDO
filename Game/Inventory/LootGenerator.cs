@@ -1,3 +1,12 @@
+/**
+ * Name: John Deardorff
+ * Date: 06/03/26
+ * Project ARDO
+ *
+ * Class description:
+ * `LootGenerator.cs` is a static utility class that rolls random loot rewards 
+    for combat outcomes. It exposes helper methods.
+ */
 using ARDO.Core.Entities;
 using ARDO.Core.Enums;
 using ARDO.Core.Factories;

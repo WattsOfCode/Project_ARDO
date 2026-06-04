@@ -1,3 +1,12 @@
+/**
+ * Name: John Deardorff
+ * Date: 06/03/26
+ * Project ARDO
+ *
+ * Class description:
+ * `EnemyFactory.cs` is a static factory file that creates concrete enemy instances 
+    for encounters. It exposes creation methods.
+ */
 using System;
 using ARDO.Core.Abstracts;
 using ARDO.Core.Enums;

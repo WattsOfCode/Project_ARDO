@@ -1,3 +1,12 @@
+/**
+ * Name: John Deardorff
+ * Date: 06/03/26
+ * Project ARDO
+ *
+ * Class description:
+ * `QuestRepository.cs` is a concrete SQLite repository that reads quest, NPC, and encounter 
+    data from the database.
+ */
 using System;
 using System.Collections.Generic;
 using Microsoft.Data.Sqlite;

@@ -1,3 +1,13 @@
+/**
+ * Name: John Deardorff
+ * Date: 06/03/26
+ * Project ARDO
+ *
+ * Class description:
+ * `InventoryRepository.cs` is a concrete SQLite repository that synchronizes 
+    inventory items for a character. It uses public CRUD-style methods to 
+    save, read, update, and remove item records from the database.
+ */
 using System;
 using Microsoft.Data.Sqlite;
 using ARDO.Core.Abstracts;

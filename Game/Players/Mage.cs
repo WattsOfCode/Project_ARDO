@@ -1,3 +1,13 @@
+/**
+ * Name: John Deardorff
+ * Date: 06/03/26
+ * Project ARDO
+ *
+ * Class description:
+ * `Mage.cs` is a concrete hero subclass that demonstrates polymorphic spell 
+    combat and mana-based abilities. It uses constructors, public combat 
+    methods, and inherited properties.
+ */
 using System;
 using System.Collections.Generic;
 using ARDO.Core.Abstracts;

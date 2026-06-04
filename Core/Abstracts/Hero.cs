@@ -1,3 +1,15 @@
+/**
+ * Name: John Deardorff
+ * Date: 06/03/26
+ * Project ARDO
+ *
+ * Class description:
+ * `Hero.cs` is an abstract base class that defines the shared combat, 
+    leveling, inventory, and progression behavior for player characters. 
+    It includes common properties, constructors, and virtual methods, 
+    while subclasses add polymorphic special attacks and CRUD remains 
+    in the repository layer.
+ */
 using System;
 using System.Collections.Generic;
 using ARDO.Core.Interfaces;

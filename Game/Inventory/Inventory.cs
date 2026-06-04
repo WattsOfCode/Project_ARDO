@@ -1,3 +1,13 @@
+/**
+ * Name: John Deardorff
+ * Date: 06/03/26
+ * Project ARDO
+ *
+ * Class description:
+ * `Inventory.cs` is a concrete composition class that stores a hero's items 
+    and exposes add, remove, and read methods. It uses private collection 
+    storage and public item-management methods.
+ */
 using System.Collections.Generic;
 using ARDO.Core.Entities;
 

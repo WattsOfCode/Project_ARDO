@@ -1,3 +1,13 @@
+/**
+ * Name: John Deardorff
+ * Date: 06/03/26
+ * Project ARDO
+ *
+ * Class description:
+ * `Enemy.cs` is an abstract base class that defines shared enemy health, rewards, 
+    and combat behavior. It provides common properties, constructors, and virtual methods, 
+    while concrete enemies add polymorphic AI.
+ */
 using System;
 using ARDO.Core.Interfaces;
 

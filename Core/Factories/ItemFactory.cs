@@ -1,3 +1,12 @@
+/**
+ * Name: John Deardorff
+ * Date: 06/03/26
+ * Project ARDO
+ *
+ * Class description:
+ * `ItemFactory.cs` is a static factory file that creates common game items 
+     for loot and shop use. It exposes creation methods.
+ */
 using ARDO.Core.Entities;
 using ARDO.Core.Enums;
 

@@ -1,3 +1,14 @@
+/**
+ * Name: John Deardorff
+ * Date: 06/03/26
+ * Project ARDO
+ *
+ * Class description:
+ * `CombatEngine.cs` is a concrete combat controller that drives turn-based 
+    encounters through polymorphic hero and enemy behavior. It uses public 
+    combat methods, private battle state, and repository saves after fights, 
+    while CRUD itself stays in the data layer.
+ */
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,6 +32,8 @@ namespace ARDO.Game.Combat
         private bool _finalBossEndingPlayed;
         private int _specialCooldownTurnsRemaining;
         private bool _awaitingSpecialChoice;
+        private bool _awaitingItemChoice;
+        private List<Consumable> _pendingConsumables = new();
         public bool LastActionWasFleeSuccessful { get; private set; }
 
         private enum PlayerActionOutcome
@@ -66,8 +79,11 @@ namespace ARDO.Game.Combat
             _finalBossEndingPlayed = false;
             _specialCooldownTurnsRemaining = 0;
             _awaitingSpecialChoice = false;
+            _awaitingItemChoice = false;
+            _pendingConsumables.Clear();
             LastActionWasFleeSuccessful = false;
 
+            _form.SetCommandContext("Combat commands: 1 attack, 2 special, 3 flee, 4 item.");
             _form.AppendNarrative("");
             _form.AppendNarrative("==========================================================");
             _form.AppendNarrative($"COMBAT INITIATED: {_player.Name} vs {_enemies.Count} foe(s)");
@@ -110,6 +126,60 @@ namespace ARDO.Game.Combat
                 }
 
                 _awaitingSpecialChoice = false;
+
+                if (!HasLivingEnemies())
+                {
+                    ResolveEncounter();
+                    return;
+                }
+
+                if (_isFinalBossEncounter)
+                {
+                    ResolveFinalBossTurn(activeEnemy);
+                    return;
+                }
+
+                _form.AppendNarrative("");
+                foreach (Enemy enemy in _enemies.Where(enemy => enemy.IsAlive))
+                {
+                    _form.AppendNarrative($"[{enemy.Name}'s turn]");
+                    int beforeHealth = _player.CurrentHealth;
+                    enemy.ExecuteAI(_player);
+                    int dealt = Math.Max(0, beforeHealth - _player.CurrentHealth);
+                    _form.AppendNarrative(DescribeEnemyAttack(enemy, dealt));
+
+                    if (!_player.IsAlive)
+                    {
+                        break;
+                    }
+                }
+
+                TickSpecialCooldown();
+
+                if (!_player.IsAlive)
+                {
+                    ResolveEncounter();
+                    return;
+                }
+
+                if (!HasLivingEnemies())
+                {
+                    ResolveEncounter();
+                    return;
+                }
+
+                UpdateBattlefieldDisplay();
+                return;
+            }
+
+            if (_awaitingItemChoice)
+            {
+                if (!ProcessItemChoice(playerChoice, _player))
+                {
+                    return;
+                }
+
+                _awaitingItemChoice = false;
 
                 if (!HasLivingEnemies())
                 {
@@ -243,7 +313,6 @@ namespace ARDO.Game.Combat
             _form.AppendNarrative("2. Execute Special Ability");
             _form.AppendNarrative("3. Attempt to Flee (40% chance)");
             _form.AppendNarrative("4. Use Item");
-            _form.AppendNarrative("Type 1 / attack, 2 / special, 3 / flee, or 4 / item.");
             if (_specialCooldownTurnsRemaining > 0)
             {
                 _form.AppendNarrative($"Special ability cooldown: {_specialCooldownTurnsRemaining} turn(s)");
@@ -304,7 +373,16 @@ namespace ARDO.Game.Combat
                 case "use item":
                 case "potion":
                 case "consumable":
-                    return ProcessUseItem(player);
+                    _pendingConsumables = player.HeroInventory.GetItems().OfType<Consumable>().ToList();
+                    if (_pendingConsumables.Count == 0)
+                    {
+                        _form.AppendNarrative("You search your pack, but there is no consumable to use.");
+                        return PlayerActionOutcome.NoTurnSpent;
+                    }
+
+                    _awaitingItemChoice = true;
+                    ShowItemMenu();
+                    return PlayerActionOutcome.NoTurnSpent;
 
                 case "1":
                 case "attack":
@@ -317,29 +395,6 @@ namespace ARDO.Game.Combat
                     _form.AppendNarrative(DescribePlayerBasicAttack(player, enemy, damage));
                     return PlayerActionOutcome.ContinueTurn;
             }
-        }
-
-        private PlayerActionOutcome ProcessUseItem(Hero player)
-        {
-            Consumable? consumable = player.HeroInventory.GetItems().OfType<Consumable>().FirstOrDefault();
-
-            if (consumable == null)
-            {
-                _form.AppendNarrative("You search your pack, but there is no consumable to use.");
-                UpdateBattlefieldDisplay();
-                return PlayerActionOutcome.NoTurnSpent;
-            }
-
-            int healedAmount = Math.Max(1, consumable.HealAmount);
-            int beforeHealth = player.CurrentHealth;
-            player.CurrentHealth = Math.Min(player.MaxHealth, player.CurrentHealth + healedAmount);
-            int actualHealed = player.CurrentHealth - beforeHealth;
-
-            player.HeroInventory.RemoveItem(consumable);
-            _playerRepo.RemoveInventoryItem(player.CharacterId, consumable.ItemId);
-
-            _form.AppendNarrative($"{player.Name} uses {consumable.Name} and recovers {actualHealed} HP.");
-            return PlayerActionOutcome.ContinueTurn;
         }
 
         private bool ProcessSpecialChoice(string choice, Hero player, Enemy enemy)
@@ -405,6 +460,37 @@ namespace ARDO.Game.Combat
                 _form.AppendNarrative("Your class has no special combat style defined.");
             }
 
+            return true;
+        }
+
+        private bool ProcessItemChoice(string choice, Hero player)
+        {
+            string normalizedChoice = choice.Trim().ToLowerInvariant();
+
+            if (normalizedChoice is "back" or "0" or "cancel")
+            {
+                _form.AppendNarrative("You close the item pouch and keep fighting.");
+                ShowItemMenu();
+                return false;
+            }
+
+            if (!int.TryParse(normalizedChoice, out int selection) || selection < 1 || selection > _pendingConsumables.Count)
+            {
+                _form.AppendNarrative($"Invalid item choice. Type 1-{_pendingConsumables.Count} or back.");
+                ShowItemMenu();
+                return false;
+            }
+
+            Consumable consumable = _pendingConsumables[selection - 1];
+            int healedAmount = Math.Max(1, consumable.HealAmount);
+            int beforeHealth = player.CurrentHealth;
+            player.CurrentHealth = Math.Min(player.MaxHealth, player.CurrentHealth + healedAmount);
+            int actualHealed = player.CurrentHealth - beforeHealth;
+
+            player.HeroInventory.RemoveItem(consumable);
+            _playerRepo.RemoveInventoryItem(player.CharacterId, consumable.ItemId);
+            _form.AppendNarrative($"{player.Name} uses {consumable.Name} and recovers {actualHealed} HP.");
+            _pendingConsumables.Clear();
             return true;
         }
 
@@ -543,6 +629,7 @@ namespace ARDO.Game.Combat
 
         private void ShowSpecialMenu()
         {
+            _form.SetCommandContext("Special commands: choose 1 to 3, or back / cancel.");
             _form.AppendNarrative("");
             _form.AppendNarrative("Choose a class ability:");
 
@@ -553,7 +640,22 @@ namespace ARDO.Game.Combat
                 _form.AppendNarrative($"{i + 1}. {move.MoveName} - {move.Description}");
             }
 
-            _form.AppendNarrative("Type 1, 2, 3, or back / cancel:");
+            _form.AppendNarrative("Choose 1, 2, 3, or back / cancel:");
+        }
+
+        private void ShowItemMenu()
+        {
+            _form.SetCommandContext("Item commands: choose 1 to " + _pendingConsumables.Count + ", or back / cancel.");
+            _form.AppendNarrative("");
+            _form.AppendNarrative("Choose a consumable item:");
+
+            for (int i = 0; i < _pendingConsumables.Count; i++)
+            {
+                Consumable consumable = _pendingConsumables[i];
+                _form.AppendNarrative($"{i + 1}. {consumable.Name} - heals {consumable.HealAmount} HP");
+            }
+
+            _form.AppendNarrative($"Choose 1-{_pendingConsumables.Count}, or back / cancel:");
         }
 
         private static string DescribePlayerBasicAttack(Hero player, Enemy enemy, int damage)

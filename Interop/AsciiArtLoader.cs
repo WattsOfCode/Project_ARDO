@@ -1,7 +1,17 @@
+/**
+ * Name: John Deardorff
+ * Date: 06/03/26
+ * Project ARDO
+ *
+ * Class description:
+ * `AsciiArtLoader.cs` is a concrete utility file that loads ASCII art files 
+    for the character and enemy panels. It exposes helper methods with 
+    file-system access.
+ */
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
-using System.Windows.Forms;
 
 namespace ARDO.Interop
 {
@@ -44,7 +54,7 @@ namespace ARDO.Interop
             // 3. Final verification
             if (!File.Exists(path))
             {
-                MessageBox.Show($"ASCII file missing:\n{path}\n\nPlease check that your file name capitalization matches exactly on disk.");
+                Debug.WriteLine($"[ARDO][ASCII] Missing art file: {path}");
                 return "[Missing ASCII Art]";
             }
 
@@ -54,7 +64,7 @@ namespace ARDO.Interop
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message);
+                Debug.WriteLine($"[ARDO][ASCII] Failed to read art file '{path}': {ex}");
                 return "[ASCII ART LOAD FAILURE]";
             }
         }

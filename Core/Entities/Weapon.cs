@@ -1,3 +1,12 @@
+/**
+ * Name: John Deardorff
+ * Date: 06/03/26
+ * Project ARDO
+ *
+ * Class description:
+ * `Weapon.cs` is a concrete item subclass that adds attack bonuses to the 
+    shared game item model. It uses constructors and inherited properties.
+ */
 using ARDO.Core.Enums;
 
 namespace ARDO.Core.Entities

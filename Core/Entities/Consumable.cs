@@ -1,3 +1,12 @@
+/**
+ * Name: John Deardorff
+ * Date: 06/03/26
+ * Project ARDO
+ *
+ * Class description:
+ * `Consumable.cs` is a concrete item subclass that stores healing values 
+    for inventory use. It uses constructors and inherited properties.
+ */
 using ARDO.Core.Enums;
 
 namespace ARDO.Core.Entities
