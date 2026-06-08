@@ -645,7 +645,7 @@ namespace ARDO.Game.Combat
 
         private void ShowItemMenu()
         {
-            _form.SetCommandContext("Item commands: choose 1 to " + _pendingConsumables.Count + ", or back / cancel.");
+            _form.SetCommandContext("Item commands: choose 1 to " + _pendingConsumables.Count + ", or 0 to cancel.");
             _form.AppendNarrative("");
             _form.AppendNarrative("Choose a consumable item:");
 
@@ -655,7 +655,8 @@ namespace ARDO.Game.Combat
                 _form.AppendNarrative($"{i + 1}. {consumable.Name} - heals {consumable.HealAmount} HP");
             }
 
-            _form.AppendNarrative($"Choose 1-{_pendingConsumables.Count}, or back / cancel:");
+            _form.AppendNarrative("0. cancel");
+            _form.AppendNarrative($"Choose 1-{_pendingConsumables.Count}, or 0 to cancel:");
         }
 
         private static string DescribePlayerBasicAttack(Hero player, Enemy enemy, int damage)
