@@ -318,7 +318,7 @@ namespace ARDO.Game.Combat
                 _form.AppendNarrative($"Special ability cooldown: {_specialCooldownTurnsRemaining} turn(s)");
             }
 
-            _form.AppendNarrative("\nChoose your action (1-4, or attack/special/flee/item):");
+            _form.AppendNarrative("\nChoose your action: 1 attack, 2 special, 3 flee, 4 item.");
             if (_isFinalBossEncounter)
             {
                 _form.AppendNarrative("The First King will not die quickly. Your blows only begin the story.");
@@ -336,7 +336,7 @@ namespace ARDO.Game.Combat
                 case "ability":
                     if (_specialCooldownTurnsRemaining > 0)
                     {
-                        _form.AppendNarrative("Your special ability is still recovering. Choose another action.");
+                _form.AppendNarrative("Your special ability is still recovering. Choose another action.");
                         return PlayerActionOutcome.NoTurnSpent;
                     }
 
@@ -402,9 +402,9 @@ namespace ARDO.Game.Combat
             string normalizedChoice = choice.Trim().ToLowerInvariant();
             List<(string MoveName, string Type, string Description)> moves = player.GetCombatMoves();
 
-            if (normalizedChoice is "back" or "0")
+            if (normalizedChoice is "back" or "0" or "cancel")
             {
-                _form.AppendNarrative("Choose a class ability:");
+                _form.AppendNarrative("Choose a special move:");
                 ShowSpecialMenu();
                 UpdateBattlefieldDisplay();
                 return false;
@@ -412,7 +412,7 @@ namespace ARDO.Game.Combat
 
             if (!int.TryParse(normalizedChoice, out int selection) || selection < 1 || selection > moves.Count)
             {
-                _form.AppendNarrative($"Invalid special choice. Type 1-{moves.Count} or back.");
+                _form.AppendNarrative($"Invalid special choice. Type 1-{moves.Count} or 0 to cancel.");
                 ShowSpecialMenu();
                 return false;
             }
@@ -476,7 +476,7 @@ namespace ARDO.Game.Combat
 
             if (!int.TryParse(normalizedChoice, out int selection) || selection < 1 || selection > _pendingConsumables.Count)
             {
-                _form.AppendNarrative($"Invalid item choice. Type 1-{_pendingConsumables.Count} or back.");
+                _form.AppendNarrative($"Invalid item choice. Type 1-{_pendingConsumables.Count} or 0 to cancel.");
                 ShowItemMenu();
                 return false;
             }
@@ -629,9 +629,9 @@ namespace ARDO.Game.Combat
 
         private void ShowSpecialMenu()
         {
-            _form.SetCommandContext("Special commands: choose 1 to 3, or back / cancel.");
+            _form.SetCommandContext("Special commands: choose 1 to 3, or 0 to cancel.");
             _form.AppendNarrative("");
-            _form.AppendNarrative("Choose a class ability:");
+            _form.AppendNarrative("Choose a special move:");
 
             List<(string MoveName, string Type, string Description)> moves = _player.GetCombatMoves();
             for (int i = 0; i < moves.Count; i++)
@@ -640,7 +640,8 @@ namespace ARDO.Game.Combat
                 _form.AppendNarrative($"{i + 1}. {move.MoveName} - {move.Description}");
             }
 
-            _form.AppendNarrative("Choose 1, 2, 3, or back / cancel:");
+            _form.AppendNarrative("0. cancel");
+            _form.AppendNarrative("Choose 1, 2, 3, or 0 to cancel:");
         }
 
         private void ShowItemMenu()

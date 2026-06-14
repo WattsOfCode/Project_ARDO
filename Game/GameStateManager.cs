@@ -196,7 +196,7 @@ namespace ARDO.Game
                     return;
 
                 default:
-                    _ui.AppendNarrative("Unknown town command. Check the input panel for the available actions.");
+                    _ui.AppendNarrative("Unknown town command. Check the input panel for the current actions.");
                     break;
             }
 
@@ -298,7 +298,7 @@ namespace ARDO.Game
 
         private void ShowTownMenu()
         {
-            _ui.SetCommandContext("Town commands: 1 buy from shop, 2 rest at inn, 3 enter dungeon, 4 save, 5 exit.");
+            _ui.SetCommandContext("Town commands: 1 buy from shop, 2 rest at inn, 3 enter dungeon, 4 save game, 5 exit to main menu.");
             _ui.AppendNarrative("");
             _ui.AppendNarrative("Oakhaven settles around you. The merchant waits nearby, the inn is warm, and the dungeon still looms below.");
             _ui.AppendNarrative("Choose your next action using the input panel below.");
@@ -393,7 +393,8 @@ namespace ARDO.Game
             CurrentState = GameState.DefeatPrompt;
             _ui.AppendNarrative("");
             _ui.AppendNarrative("You fall to the dungeon floor, breath gone and vision dimming.");
-            _ui.AppendNarrative("Would you like to continue? Type 1 / yes or 2 / no.");
+            _ui.AppendNarrative("Continue your run? Type 1 / yes or 2 / no.");
+            _ui.AppendNarrative("Choosing no deletes the current character profile and returns to the main menu.");
         }
 
         private void ProcessDefeatPrompt(string command)
@@ -413,7 +414,7 @@ namespace ARDO.Game
                     _hero.IsRestingInSafety = true;
                     _playerRepo.SaveGameState(_hero, _hero.ActiveStoryNode);
                     _ui.AppendNarrative("");
-                    _ui.AppendNarrative("Rise hero there is still much more for you to do.");
+                    _ui.AppendNarrative("Rise, hero. There is still much more for you to do.");
                     _ui.AppendNarrative("");
                     CurrentState = GameState.Town;
                     EnterTown();

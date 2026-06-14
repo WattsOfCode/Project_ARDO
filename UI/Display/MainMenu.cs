@@ -46,7 +46,7 @@ namespace ARDO.UI.Display
                 "2. Load Existing Character Save Slot",
                 "3. Exit Application");
             _form.AppendNarrative("");
-            _form.AppendNarrative("Select an option by typing 1, 2, or 3:");
+            _form.AppendNarrative("Select an option: 1 new game, 2 load game, 3 exit.");
         }
 
         public void BeginNewGame()
@@ -118,7 +118,7 @@ namespace ARDO.UI.Display
             _form.AppendNarrative("\nChoose your class:");
             _form.AppendNarrative("1. Warrior (higher health and defense)");
             _form.AppendNarrative("2. Mage (higher mana and spell damage)");
-            _form.AppendNarrative("Select a class by typing 1 or 2:");
+            _form.AppendNarrative("Select a class: 1 Warrior or 2 Mage.");
         }
 
         private void ProcessClassChoice(string choice)
@@ -128,7 +128,7 @@ namespace ARDO.UI.Display
             else if (choice == "2") classType = "Mage";
             else
             {
-                _form.AppendNarrative("Invalid class choice. Type 1 for Warrior or 2 for Mage:");
+                _form.AppendNarrative("Invalid class choice. Type 1 for Warrior or 2 for Mage.");
                 return;
             }
 
@@ -164,7 +164,7 @@ namespace ARDO.UI.Display
                 _form.AppendNarrative($"{i + 1}. [ID: {row["character_id"]}] {row["name"]} - level {row["level"]} {row["class_type"]}");
             }
 
-            _form.AppendNarrative($"\nSelect a save slot (1-{_cachedSlots.Rows.Count}) or type 0 to go back:");
+            _form.AppendNarrative($"\nSelect a save slot: 1-{_cachedSlots.Rows.Count}, or 0 to return to the main menu.");
         }
 
         private void ProcessLoadSlotChoice(string choice)
@@ -188,13 +188,13 @@ namespace ARDO.UI.Display
                 }
                 else
                 {
-                    _form.AppendNarrative($"Unable to load that profile. Type 1-{slotCount} or 0 to go back:");
+                    _form.AppendNarrative($"Unable to load that profile. Type 1-{slotCount} or 0 to return to the main menu.");
                 }
             }
             else
             {
                 int slotCount = _cachedSlots?.Rows.Count ?? 0;
-                _form.AppendNarrative($"Invalid save slot selection. Type 1-{slotCount} or 0 to go back:");
+                _form.AppendNarrative($"Invalid save slot selection. Type 1-{slotCount} or 0 to return to the main menu.");
             }
         }
 
