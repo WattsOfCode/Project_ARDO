@@ -35,6 +35,8 @@ Project walkthrough video:
 2. Launch `ARDO.exe`.
 3. The published build is self-contained, so no separate .NET runtime installation should be required.
 
+Note: Run as administrator 
+
 ## Application Start Flow
 
 The application starts in `Program.cs`, which initializes the SQLite database and launches `StartMenuForm`.
