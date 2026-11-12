@@ -275,6 +275,8 @@ namespace ARDO.UI.Controls
         }
 
         // A click puts the command in the box; Enter runs it.
+        private static string Items(int count) => count == 1 ? "1 item" : $"{count} items";
+
         private void Suggest(string command, string message)
         {
             _feedbackLabel.Text = message;
@@ -474,11 +476,11 @@ namespace ARDO.UI.Controls
 
                 if (skippedEquipped > 0)
                 {
-                    ShowFeedback($"Sold {soldCount} item(s) for {totalGold} gold. {skippedEquipped} equipped item(s) were kept.");
+                    ShowFeedback($"Sold {Items(soldCount)} for {totalGold} gold. Kept {Items(skippedEquipped)} you are wearing.");
                 }
                 else
                 {
-                    ShowFeedback($"Sold {soldCount} item(s) for {totalGold} gold.");
+                    ShowFeedback($"Sold {Items(soldCount)} for {totalGold} gold.");
                 }
             }
             catch (Exception ex)

@@ -37,7 +37,7 @@ namespace ARDO.Game.Events
                 "A CRACKED SHRINE",
                 new[]
                 {
-                    "A shrine to the Progenitor leans out of the wall, split down the middle.",
+                    "A shrine to Alhuezo, the Progenitor, leans out of the wall, split down the middle.",
                     "Something still flickers in the bowl at its feet."
                 },
                 new[]

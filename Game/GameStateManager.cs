@@ -42,6 +42,7 @@ namespace ARDO.Game
 
         // The quest whose story has been told this session, so a return to town doesn't retell it.
         private int _introShownForQuest;
+        private bool _choosingFloor;
 
         public GameState CurrentState { get; private set; } = GameState.Town;
 
@@ -67,9 +68,9 @@ namespace ARDO.Game
             if (isNewGame)
             {
                 // Whole paragraphs, so the panel wraps them at its own width.
-                Say("In the Beginning, the Progenitor ordained a sacred geometry: flesh was meant to rise from the dust, " +
+                Say("In the Beginning, Alhuezo, the Progenitor, ordained a sacred geometry: flesh was meant to rise from the dust, " +
                     "knit itself over ancient stone, and age backward into a state of pure, unblemished light. " +
-                    "But He grew cruel. With a cosmic wrench, He inverted the wheel.");
+                    "But He grew cruel. With a cosmic wrench, He invented the wheel.");
                 Say("");
                 Say("What humanity celebrates as \"birth\" is actually the beginning of the end. " +
                     "We are born soft and fragile, slowly rotting into the rigid skeletons of His design. " +
@@ -77,6 +78,11 @@ namespace ARDO.Game
                 Say("");
                 Say("The Maw below Oakhaven has opened again. You must descend into the primordial dark, " +
                     "butcher the guardians of the twisted timeline, and challenge Alhuezo, the God-King who turned our growth into a slow, living decay.");
+            }
+            else if (_hero.StoryComplete)
+            {
+                Say("You fell before Alhuezo's throne, yet Oakhaven wakes you once more.");
+                Say("The way to the throne is sealed to you now, but the upper floors still stir.");
             }
             else
             {
@@ -94,7 +100,12 @@ namespace ARDO.Game
             _onSidePassage = false;
             _inAmbush = false;
             _activeEvent = null;
+            _choosingFloor = false;
             _hero.EndDungeonRun();
+
+            // A finished hero only borrows a floor for a run; in town they stand at the end of the story.
+            if (_hero.StoryComplete)
+                _hero.ActiveStoryNode = EncounterTable.FinalQuestId;
 
             _ui.ShowPlayer(_hero);
             _ui.UpdateVisualMetricsDisplay();
@@ -103,6 +114,13 @@ namespace ARDO.Game
             Say("                        OAKHAVEN", MessageTone.Header);
             Say("==========================================================", MessageTone.Header);
             Say("");
+
+            if (_hero.StoryComplete)
+            {
+                Say("Your story is told. The throne is sealed, but floors 1 to 3 are still yours to walk.", MessageTone.Gold);
+                ShowTownMenu();
+                return;
+            }
 
             QuestRepository.QuestSummary? quest = _questRepo.GetQuestSummary(_hero.ActiveStoryNode);
             var npc = _questRepo.GetNpcForQuest(_hero.ActiveStoryNode);
@@ -204,6 +222,12 @@ namespace ARDO.Game
 
         private void ProcessTownCommand(string command)
         {
+            if (_choosingFloor)
+            {
+                ProcessFloorChoice(command);
+                return;
+            }
+
             bool showTownMenu = true;
 
             switch (command)
@@ -222,6 +246,12 @@ namespace ARDO.Game
                 case "3":
                 case "dungeon":
                 case "return":
+                    if (_hero.StoryComplete)
+                    {
+                        ShowFloorChoice();
+                        return;
+                    }
+
                     StartDungeonRun();
                     showTownMenu = false;
                     break;
@@ -275,8 +305,9 @@ namespace ARDO.Game
                 {
                     CurrentState = GameState.GameOver;
 
-                    // The story is over for this hero: the load list shows it, and it can't be replayed.
+                    // The story is over for this hero: the load list marks it, and the throne is sealed to them.
                     _hero.StoryComplete = true;
+                    _hero.RestoreForTown();
                     _playerRepo.SaveGameState(_hero);
                     _ui.SetCommandContext("Type anything and press Enter to return to the start screen.");
                     Say("The epilogue is complete.", MessageTone.Dim);
@@ -466,7 +497,8 @@ namespace ARDO.Game
             {
                 Say("");
                 Say("The floor falls quiet behind you, and you climb back to Oakhaven.");
-                _hero.ActiveStoryNode = Math.Min(EncounterTable.FinalQuestId, _hero.ActiveStoryNode + 1);
+                if (!_hero.StoryComplete)
+                    _hero.ActiveStoryNode = Math.Min(EncounterTable.FinalQuestId, _hero.ActiveStoryNode + 1);
             }
 
             _playerRepo.SaveGameState(_hero);
@@ -583,6 +615,41 @@ namespace ARDO.Game
             Say($"You now have {_hero.CurrentHealth}/{_hero.MaxHealth} HP.", MessageTone.Heal);
             _playerRepo.SaveGameState(_hero);
             _ui.UpdateVisualMetricsDisplay();
+        }
+
+        // Finished heroes pick any floor before the throne.
+        private void ShowFloorChoice()
+        {
+            _choosingFloor = true;
+            _ui.SetCommandContext("Pick a floor 1 to 3, or 0 to stay in town.");
+            Say("");
+            Say("Which floor will you walk?");
+            for (int floor = 1; floor < EncounterTable.FinalQuestId; floor++)
+            {
+                QuestRepository.QuestSummary? quest = _questRepo.GetQuestSummary(floor);
+                Say($"{floor}. {quest?.Title ?? $"Floor {floor}"}");
+            }
+            Say("0. Stay in town", MessageTone.Dim);
+        }
+
+        private void ProcessFloorChoice(string command)
+        {
+            if (command == "0")
+            {
+                _choosingFloor = false;
+                ShowTownMenu(arriving: false);
+                return;
+            }
+
+            if (!int.TryParse(command, out int floor) || floor < 1 || floor >= EncounterTable.FinalQuestId)
+            {
+                Say("Pick a floor 1 to 3, or 0 to stay in town.", MessageTone.Dim);
+                return;
+            }
+
+            _choosingFloor = false;
+            _hero.ActiveStoryNode = floor;
+            StartDungeonRun();
         }
 
         private void StartDungeonRun()

@@ -298,7 +298,7 @@ namespace ARDO.Game.Combat
 
             if (_player.Burn.IsActive)
             {
-                Say($"  You are burning: {_player.Burn.DamagePerTurn} a round, {_player.Burn.TurnsLeft} round(s) left.", MessageTone.Damage);
+                Say($"  You are burning: {_player.Burn.DamagePerTurn} a round, {Plural(_player.Burn.TurnsLeft, "round", "rounds")} left.", MessageTone.Damage);
             }
 
             Say("");

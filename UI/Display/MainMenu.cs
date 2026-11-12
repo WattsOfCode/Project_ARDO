@@ -149,14 +149,7 @@ namespace ARDO.UI.Display
 
             if (int.TryParse(choice, out int selection) && _cachedSlots != null && selection > 0 && selection <= slotCount)
             {
-                DataRow chosen = _cachedSlots.Rows[selection - 1];
-                if (IsFinished(chosen))
-                {
-                    _form.AppendNarrative($"{chosen["name"]}'s story ended at the God-King's throne. Pick another hero, or 0 to go back.");
-                    return;
-                }
-
-                int targetCharId = Convert.ToInt32(chosen["character_id"]);
+                int targetCharId = Convert.ToInt32(_cachedSlots.Rows[selection - 1]["character_id"]);
                 Hero? loadedHero = _playerRepo.LoadFullProfile(targetCharId);
 
                 if (loadedHero != null)

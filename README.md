@@ -32,7 +32,7 @@ This repository currently reflects the Phase 3 release of the project, including
 - A character creation screen with the two classes side by side; hero names are capped at 16 characters
 - Click a menu option, list row, enemy or class card to fill in its command, then press Enter
 - Attack, Special, Flee and Item buttons during a fight, plus Esc, command history (Up / Down) and PageUp / PageDown
-- A hero who reaches the epilogue is marked on the load list as fallen to the God-King, and the ending isn't replayed
+- A hero who reaches the epilogue is marked on the load list as fallen to the God-King. They can still be loaded and pick floor 1, 2 or 3 from the dungeon, but the throne is sealed to them
 
 ## Screen Recording
 
