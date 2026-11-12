@@ -103,7 +103,7 @@ namespace ARDO.UI.Controls
             _feedbackLabel = new Label
             {
                 Dock = DockStyle.Fill,
-                Text = "Your pack is open. Commands are typed in the box below.",
+                Text = "Click an item and press Enter, or type a command below.",
                 ForeColor = Color.WhiteSmoke,
                 BackColor = Color.Black,
                 Font = UiFonts.Mono(11f),

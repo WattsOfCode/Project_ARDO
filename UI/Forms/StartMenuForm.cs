@@ -81,7 +81,7 @@ namespace ARDO.UI.Forms
             _optionsLabel = new Label
             {
                 Dock = DockStyle.Fill,
-                Text = "1. New Game\n2. Load Game\n3. Exit",
+                Text = "1. New game\n2. Load game\n3. Exit",
                 ForeColor = Color.WhiteSmoke,
                 BackColor = Color.Black,
                 Font = new Font("Consolas", 17, FontStyle.Regular),
@@ -164,7 +164,7 @@ namespace ARDO.UI.Forms
                     Close();
                     break;
                 default:
-                    _optionsLabel.Text = "1. New Game\n2. Load Game\n3. Exit";
+                    _optionsLabel.Text = "1. New game\n2. Load game\n3. Exit";
                     _commandLabel.Text = "Invalid input. Type 1, 2, or 3, then press Enter:";
                     _commandInput.Clear();
                     _commandInput.Focus();
@@ -180,7 +180,7 @@ namespace ARDO.UI.Forms
                 Show();
                 _commandInput.Focus();
                 _commandLabel.Text = "Type new/load/exit or 1/2/3, then press Enter:";
-                _optionsLabel.Text = "1. New Game\n2. Load Game\n3. Exit";
+                _optionsLabel.Text = "1. New game\n2. Load game\n3. Exit";
             };
             Hide();
             gameForm.Show();
@@ -189,7 +189,7 @@ namespace ARDO.UI.Forms
         protected override void OnShown(EventArgs e)
         {
             base.OnShown(e);
-            _optionsLabel.Text = "1. New Game\n2. Load Game\n3. Exit";
+            _optionsLabel.Text = "1. New game\n2. Load game\n3. Exit";
             _commandLabel.Text = "Type new/load/exit or 1/2/3, then press Enter:";
             CenterTitleText();
             _commandInput.Focus();

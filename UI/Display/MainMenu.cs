@@ -130,7 +130,8 @@ namespace ARDO.UI.Display
             for (int i = 0; i < _cachedSlots.Rows.Count; i++)
             {
                 DataRow row = _cachedSlots.Rows[i];
-                _form.AppendNarrative($"{i + 1}. {row["name"],-18} Level {row["level"],-3} {row["class_type"]}");
+                string fate = IsFinished(row) ? "  (fell to the God-King)" : string.Empty;
+                _form.AppendNarrative($"{i + 1}. {row["name"],-18} Level {row["level"],-3} {row["class_type"]}{fate}");
             }
 
             _form.SetCommandContext($"Load: pick a hero 1 to {_cachedSlots.Rows.Count}, or 0 to go back.");
@@ -148,7 +149,14 @@ namespace ARDO.UI.Display
 
             if (int.TryParse(choice, out int selection) && _cachedSlots != null && selection > 0 && selection <= slotCount)
             {
-                int targetCharId = Convert.ToInt32(_cachedSlots.Rows[selection - 1]["character_id"]);
+                DataRow chosen = _cachedSlots.Rows[selection - 1];
+                if (IsFinished(chosen))
+                {
+                    _form.AppendNarrative($"{chosen["name"]}'s story ended at the God-King's throne. Pick another hero, or 0 to go back.");
+                    return;
+                }
+
+                int targetCharId = Convert.ToInt32(chosen["character_id"]);
                 Hero? loadedHero = _playerRepo.LoadFullProfile(targetCharId);
 
                 if (loadedHero != null)
@@ -165,6 +173,8 @@ namespace ARDO.UI.Display
                 _form.AppendNarrative($"Pick a hero from 1 to {slotCount}, or 0 to go back.");
             }
         }
+
+        private static bool IsFinished(DataRow row) => Convert.ToInt32(row["story_complete"]) == 1;
 
         // The story panel centers anything between two "===" rules.
         private void WriteHeader(string title, string subtitle)

@@ -191,7 +191,7 @@ namespace ARDO.UI.Controls
             var shopStatusLabel = new Label
             {
                 Dock = DockStyle.Fill,
-                Text = "Item lists are shown here; commands are entered in the input panel below.",
+                Text = "Click an item and press Enter, or type a command below.",
                 ForeColor = Color.LightGray,
                 BackColor = Color.Black,
                 Font = new Font("Consolas", 10, FontStyle.Regular),
@@ -365,7 +365,7 @@ namespace ARDO.UI.Controls
                 GameItem item = offer.CreateItem();
                 if (!_hero.HeroInventory.AddItem(item))
                 {
-                    ShowFeedback("Your inventory is full.");
+                    ShowFeedback("Your pack is full.");
                     return;
                 }
 

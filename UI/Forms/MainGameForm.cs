@@ -197,7 +197,7 @@ namespace ARDO.UI.Forms
         {
             if (_activeHero == null)
             {
-                _statsPanel.ShowPlaceholder("No active hero loaded.");
+                _statsPanel.ShowPlaceholder(NoHeroMessage);
                 return;
             }
 
@@ -220,14 +220,14 @@ namespace ARDO.UI.Forms
             FocusCommandInput();
         }
 
+        private const string NoHeroMessage = "Make or load a hero to see their stats here.";
+
         private void BeginLaunchMode()
         {
             _gameShell.Visible = true;
             _gameShell.BringToFront();
             _characterPanel.UpdateCharacterName("ARDO");
-            _statsPanel.ShowPlaceholder(_launchMode == GameLaunchMode.LoadGame
-                ? "Pick a saved hero to see their stats."
-                : "Your hero's stats show here once they're made.");
+            _statsPanel.ShowPlaceholder(NoHeroMessage);
 
             switch (_launchMode)
             {
@@ -327,7 +327,7 @@ namespace ARDO.UI.Forms
             _gameShell.Visible = false;
             _quickActions.SetActionsEnabled(false);
             _quickActions.SetFightMode(false);
-            _statsPanel.ShowPlaceholder("No active hero loaded.");
+            _statsPanel.ShowPlaceholder(NoHeroMessage);
             Close();
         }
     }

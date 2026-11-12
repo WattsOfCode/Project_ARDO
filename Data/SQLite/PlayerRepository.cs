@@ -60,7 +60,7 @@ namespace ARDO.Data.SQLite
             DataTable table = new DataTable();
             using var connection = _config.CreateConnection();
             const string query = @"
-                SELECT c.character_id, c.name, c.class_type, c.level, c.gold, q.title as current_quest
+                SELECT c.character_id, c.name, c.class_type, c.level, c.gold, c.story_complete, q.title as current_quest
                 FROM characters c
                 JOIN quest_templates q ON c.active_story_node = q.quest_id";
 
@@ -94,6 +94,7 @@ namespace ARDO.Data.SQLite
                     hero.CurrentHealth = Convert.ToInt32(reader["current_health"]);
                     hero.Gold = Convert.ToInt32(reader["gold"]);
                     hero.ActiveStoryNode = Convert.ToInt32(reader["active_story_node"]);
+                    hero.StoryComplete = Convert.ToInt32(reader["story_complete"]) == 1;
 
                     if (hero is Mage mage)
                     {
@@ -117,7 +118,8 @@ namespace ARDO.Data.SQLite
             const string query = @"
                 UPDATE characters
                 SET level = @level, experience = @xp, current_health = @currentHp, max_health = @maxHp,
-                    current_mana = @currentMana, max_mana = @maxMana, gold = @gold, active_story_node = @storyNode
+                    current_mana = @currentMana, max_mana = @maxMana, gold = @gold, active_story_node = @storyNode,
+                    story_complete = @storyComplete
                 WHERE character_id = @charId;";
 
             using var command = new SqliteCommand(query, connection);
@@ -129,6 +131,7 @@ namespace ARDO.Data.SQLite
             command.Parameters.AddWithValue("@maxMana", character is Mage mage ? mage.MaxMana : 0);
             command.Parameters.AddWithValue("@gold", character.Gold);
             command.Parameters.AddWithValue("@storyNode", character.ActiveStoryNode);
+            command.Parameters.AddWithValue("@storyComplete", character.StoryComplete ? 1 : 0);
             command.Parameters.AddWithValue("@charId", character.CharacterId);
 
             command.ExecuteNonQuery();

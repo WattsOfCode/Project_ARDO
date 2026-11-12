@@ -102,14 +102,14 @@ namespace ARDO.Game.Combat
 
             Say("");
             Say("==========================================================", MessageTone.Header);
-            Say($"COMBAT INITIATED: {_player.Name} vs {_enemies.Count} foe(s)", MessageTone.Header);
+            Say($"COMBAT INITIATED: {_player.Name} vs {Plural(_enemies.Count, "foe", "foes")}", MessageTone.Header);
             Say("==========================================================", MessageTone.Header);
 
-            Say($"The dungeon answers with {_enemies.Count} presence(s).");
+            Say(_enemies.Count == 1 ? "Something answers from the dark." : $"The dungeon answers with {_enemies.Count} shapes.");
             if (_isFinalBossEncounter)
             {
                 Say("The deepest chamber hushes around you.");
-                Say("Somewhere beyond the dark, the First King waits with patient certainty.");
+                Say("Somewhere beyond the dark, Alhuezo, the God-King, waits with patient certainty.");
                 Say("This is not just another fight. It is the end of the road you have been walking.");
             }
 
@@ -347,7 +347,7 @@ namespace ARDO.Game.Combat
 
             if (_isFinalBossEncounter)
             {
-                Say("The First King will not die quickly. Your blows only begin the story.", MessageTone.Dim);
+                Say("The God-King will not die quickly. Your blows only begin the story.", MessageTone.Dim);
             }
         }
 
@@ -410,7 +410,7 @@ namespace ARDO.Game.Combat
                     Say($"{_player.Name} attempts to break away from combat and flee...");
                     if (_player.EscapeFromCombat())
                     {
-                        Say("Success! You escape the enemy's clutches and retreat to the safety of Oakhaven.", MessageTone.Heal);
+                        Say("Success! You break free of the enemy's clutches.", MessageTone.Heal);
                         LastActionWasFleeSuccessful = true;
                         return PlayerActionOutcome.Fled;
                     }
@@ -569,7 +569,7 @@ namespace ARDO.Game.Combat
             if (!HasLivingEnemies() && _enemies.Count > 0)
             {
                 Say("");
-                Say($"Victory. You defeated {_enemies.Count} enemy(ies).", MessageTone.Gold);
+                Say($"Victory. You defeated {Plural(_enemies.Count, "enemy", "enemies")}.", MessageTone.Gold);
 
                 int totalXp = _enemies.Sum(enemy => enemy.XpReward);
                 int totalGold = _enemies.Sum(enemy => enemy.GoldReward);
@@ -589,7 +589,8 @@ namespace ARDO.Game.Combat
             }
             else if (!_player.IsAlive)
             {
-                Say($"\nDefeat. You were struck down by {GetTarget()?.Name ?? "the enemy"}.", MessageTone.Damage);
+                Say("");
+                Say("Defeat.", MessageTone.Damage);
             }
 
             EndCombat();
@@ -608,15 +609,15 @@ namespace ARDO.Game.Combat
             if (_finalBossRounds <= FinalBossScriptedRounds)
             {
                 Say("");
-                Say($"[Phase {_finalBossRounds}] The First King answers your strike with cold amusement.", MessageTone.Warning);
-                Say("Your blow lands. The throne does not move.");
+                Say($"[Phase {_finalBossRounds}] The God-King answers your strike with cold amusement.", MessageTone.Warning);
+                Say("Your attack lands. The throne does not move.");
 
                 int pressureDamage = Math.Max(1, boss.BaseDamage / 3);
                 _player.TakeDamage(pressureDamage);
                 if (_player.CurrentHealth <= 0)
                 {
                     _player.CurrentHealth = 1;
-                    Say("You stumble, but the king lets you keep breathing a little longer.", MessageTone.Damage);
+                    Say("You stumble, but the God-King lets you keep breathing a little longer.", MessageTone.Damage);
                 }
 
                 Say($"The room shudders under a smaller, patient strike. You endure with {_player.CurrentHealth} HP remaining.", MessageTone.Damage);
@@ -649,14 +650,14 @@ namespace ARDO.Game.Combat
             Say("");
             Say("The ringing in your ears fades into a heavy, suffocating silence.");
             Say("You are on the floor, the cold stone pressing against your cheek, your body refusing to move.");
-            Say("Through a blurred gaze, you see the dark hem of their cloak slide into view.");
-            Say("They aren't rushing. They aren't even breathing heavily.");
+            Say("Through a blurred gaze, you see the dark hem of Alhuezo's cloak slide into view.");
+            Say("He isn't rushing. He isn't even breathing heavily.");
             Say("");
             Say("A soft, mocking sigh ripples through the quiet room.");
             Say("\"You spoke so loudly of your destiny. Yet here you lie, painting my floors with your blood.", MessageTone.Warning);
             Say("Take your farce out of my sight.\"", MessageTone.Warning);
             Say("");
-            Say("T _____ _                 _                          ", MessageTone.Gold);
+            Say(" _____ _                 _                          ", MessageTone.Gold);
             Say("/__   \\ |__   __ _ _ __ | | __  _   _  ___  _   _   ", MessageTone.Gold);
             Say("  / /\\/ '_ \\ / _` | '_ \\| |/ / | | | |/ _ \\| | | |  ", MessageTone.Gold);
             Say(" / /  | | | | (_| | | | |   <  | |_| | (_) | |_| |  ", MessageTone.Gold);
@@ -729,6 +730,8 @@ namespace ARDO.Game.Combat
             Say("0. cancel", MessageTone.Dim);
         }
 
+        private static string Plural(int count, string one, string many) => $"{count} {(count == 1 ? one : many)}";
+
         private string DescribePlayerBasicAttack(Enemy enemy, HitResult hit)
         {
             if (hit.Missed)
@@ -739,7 +742,7 @@ namespace ARDO.Game.Combat
             string line = _player switch
             {
                 Mage => $"{_player.Name} snaps a quick arcane burst toward {enemy.Name} for {hit.Damage} damage.",
-                Warrior => $"{_player.Name} cuts into {enemy.Name} with a sword strike for {hit.Damage} damage.",
+                Warrior => $"{_player.Name} cuts into {enemy.Name} for {hit.Damage} damage.",
                 _ => $"{_player.Name} lands a basic attack on {enemy.Name} for {hit.Damage} damage."
             };
 

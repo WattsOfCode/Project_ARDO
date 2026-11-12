@@ -119,6 +119,7 @@ namespace ARDO.Data.SQLite
                 EnsureColumnExists(connection, transaction, "inventory_items", "item_value", "INTEGER NOT NULL DEFAULT 0");
                 EnsureColumnExists(connection, transaction, "inventory_items", "equipment_slot", "TEXT NOT NULL DEFAULT 'None'");
                 EnsureColumnExists(connection, transaction, "inventory_items", "item_effect", "TEXT NOT NULL DEFAULT 'None'");
+                EnsureColumnExists(connection, transaction, "characters", "story_complete", "INTEGER NOT NULL DEFAULT 0");
 
                 // Enemy stats live in the enemy classes; this table from older versions was never read.
                 Execute(connection, transaction, "DROP TABLE IF EXISTS enemy_templates;");
@@ -128,15 +129,16 @@ namespace ARDO.Data.SQLite
                     (1, 'The First Descent', 'You wake in Oakhaven at the Inn Keeper''s bedside, and the town above the Maw remembers the reversal of life.', 'Minion', 0),
                     (2, 'The Emberward Depths', 'The second layer of the dungeon burns with old judgment and restless echoes.', 'Minion', 0),
                     (3, 'The Hollow Cathedral', 'Deeper still, a broken cathedral echoes with the prayers of things that should not live.', 'Minion', 0),
-                    (4, 'The First King Awaits', 'At the root of all things sits the origin of the world: Alhuezo, the First King.', 'Boss', 1);");
+                    (4, 'The God-King Awaits', 'At the root of all things sits the origin of the world: Alhuezo, the God-King.', 'Boss', 1);");
 
                 // NPC rows are fixed content: replace them on every launch so edits here reach old saves.
                 Execute(connection, transaction, "DELETE FROM npcs;");
                 Execute(connection, transaction, @"
                     INSERT INTO npcs (name, role_title, greeting_dialogue, associated_quest_id) VALUES
                     ('Maren', 'Inn Keeper', 'You slept through the first bell, but the road below the town is already open. Drink, rest, and then descend when you are ready.', 1),
-                    ('Eldrin', 'Wandering Scout', 'The fire below does not burn rock. It burns memory. Keep your blade close.', 2),
-                    ('Sera', 'Cathedral Scribe', 'The hollow bells still ring. When they do, the next descent begins.', 3);");
+                    ('Eldrin', 'Wandering Scout', 'The fire below does not burn rock. It burns memory. Keep your guard up.', 2),
+                    ('Sera', 'Cathedral Scribe', 'The hollow bells still ring. When they do, the next descent begins.', 3),
+                    ('Maren', 'Inn Keeper', 'The bells have gone quiet. Whatever sits on that throne has waited a long time for you. Rest first. Some roads only run one way.', 4);");
 
                 transaction.Commit();
             }

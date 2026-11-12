@@ -40,6 +40,9 @@ namespace ARDO.Game
         private bool _onSidePassage;
         private bool _inAmbush;
 
+        // The quest whose story has been told this session, so a return to town doesn't retell it.
+        private int _introShownForQuest;
+
         public GameState CurrentState { get; private set; } = GameState.Town;
 
         public GameStateManager(MainGameForm ui, Hero hero, IPlayerRepository playerRepo, QuestRepository questRepo)
@@ -73,7 +76,7 @@ namespace ARDO.Game
                     "Our entire existence is a countdown in reverse.");
                 Say("");
                 Say("The Maw below Oakhaven has opened again. You must descend into the primordial dark, " +
-                    "butcher the guardians of the twisted timeline, and challenge the God-King who turned our growth into a slow, living decay.");
+                    "butcher the guardians of the twisted timeline, and challenge Alhuezo, the God-King who turned our growth into a slow, living decay.");
             }
             else
             {
@@ -104,19 +107,28 @@ namespace ARDO.Game
             QuestRepository.QuestSummary? quest = _questRepo.GetQuestSummary(_hero.ActiveStoryNode);
             var npc = _questRepo.GetNpcForQuest(_hero.ActiveStoryNode);
 
+            // The quest's story and its NPC play on the first arrival for that quest;
+            // later visits (after fleeing, or a fall) just name the quest.
+            bool firstArrival = _introShownForQuest != _hero.ActiveStoryNode;
+            _introShownForQuest = _hero.ActiveStoryNode;
+
             if (quest != null)
             {
                 Say($"Quest {_hero.ActiveStoryNode}: {quest.Title}", MessageTone.Gold);
+            }
+
+            if (quest != null && firstArrival)
+            {
                 Say(quest.NarrativeIntro);
 
                 // The first floor's intro already says the way down is open.
                 if (quest.IsFinalNode)
-                    Say("The final chamber lies beneath the town. The king waits there, beyond mercy.");
+                    Say("The final chamber lies beneath the town. He waits there, beyond mercy.");
                 else if (_hero.ActiveStoryNode > 1)
                     Say("Another section of the dungeon has opened. Clear it, return, and press deeper.");
             }
 
-            if (npc != null)
+            if (npc != null && firstArrival)
             {
                 Say("");
                 Say($"[{npc.Value.Role}] {npc.Value.Name}: \"{npc.Value.Dialogue}\"", MessageTone.Dim);
@@ -231,7 +243,7 @@ namespace ARDO.Game
                     return;
 
                 default:
-                    Say("Unknown town command. Check the input panel for the current actions.", MessageTone.Dim);
+                    Say("Pick 1 to 5 from the town menu, or i / g for your pack and gear.", MessageTone.Dim);
                     break;
             }
 
@@ -262,8 +274,12 @@ namespace ARDO.Game
                 if (_combatEngine.FinalBossEndingPlayed)
                 {
                     CurrentState = GameState.GameOver;
+
+                    // The story is over for this hero: the load list shows it, and it can't be replayed.
+                    _hero.StoryComplete = true;
+                    _playerRepo.SaveGameState(_hero);
                     _ui.SetCommandContext("Type anything and press Enter to return to the start screen.");
-                    Say("The epilogue is complete. Type anything and press Enter to return to the start screen.", MessageTone.Dim);
+                    Say("The epilogue is complete.", MessageTone.Dim);
                     return;
                 }
 
@@ -449,9 +465,8 @@ namespace ARDO.Game
             if (quest != null)
             {
                 Say("");
-                Say("The dungeon section collapses behind you. Town will mark the next descent.");
+                Say("The floor falls quiet behind you, and you climb back to Oakhaven.");
                 _hero.ActiveStoryNode = Math.Min(EncounterTable.FinalQuestId, _hero.ActiveStoryNode + 1);
-                Say($"Your journey advances to quest node {_hero.ActiveStoryNode}.", MessageTone.Gold);
             }
 
             _playerRepo.SaveGameState(_hero);
@@ -600,11 +615,12 @@ namespace ARDO.Game
         private void HandleDefeatStart()
         {
             CurrentState = GameState.DefeatPrompt;
-            _ui.SetCommandContext("Type 1 / yes to continue (costs 50 gold), or 2 / no to delete this character.");
+            _ui.SetCommandContext("Type 1 to rise again in Oakhaven (50 gold), or 2 to erase this hero.");
             Say("");
             Say("You fall to the dungeon floor, breath gone and vision dimming.", MessageTone.Damage);
-            Say("Continue your run? Type 1 / yes or 2 / no.");
-            Say("Choosing no deletes the current character profile and returns to the main menu.", MessageTone.Warning);
+            Say("");
+            Say("1 Rise again in Oakhaven (50 gold)   2 Let this hero go");
+            Say("Letting go erases this hero's save for good.", MessageTone.Warning);
         }
 
         private void ProcessDefeatPrompt(string command)
@@ -641,7 +657,7 @@ namespace ARDO.Game
                     break;
 
                 default:
-                    Say("Please type yes or no.", MessageTone.Dim);
+                    Say("Type 1 to rise again, or 2 to let this hero go.", MessageTone.Dim);
                     break;
             }
         }

@@ -132,7 +132,7 @@ namespace ARDO.UI.Controls
             _feedbackLabel = new Label
             {
                 Dock = DockStyle.Fill,
-                Text = "Pick a piece by its number: equip 1.",
+                Text = "Click a piece and press Enter, or type equip 1.",
                 ForeColor = Color.WhiteSmoke,
                 BackColor = Color.Black,
                 Font = UiFonts.Mono(11f),

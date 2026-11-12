@@ -36,6 +36,9 @@ namespace ARDO.Core.Abstracts
         public EquipmentManager Equipment { get; set; }
         public int ActiveStoryNode { get; set; } = 1;
 
+        // True once the hero has reached the epilogue; their story is over.
+        public bool StoryComplete { get; set; }
+
         // Defense from guard moves (Defensive Guard, Shield Bash, Arcane Ward). Lasts until the enemies' turn ends.
         public int GuardDefense { get; set; }
         // Each charge halves the next hit taken (and lets it drop to 0). Also cleared after the enemies' turn.

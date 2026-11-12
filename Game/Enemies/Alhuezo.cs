@@ -11,7 +11,7 @@ namespace ARDO.Game.Enemies
 {
     public sealed class Alhuezo : Boss
     {
-        public Alhuezo() : base("Alhuezo, the First King", 999, 80)
+        public Alhuezo() : base("Alhuezo, the God-King", 999, 80)
         {
         }
 

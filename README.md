@@ -24,6 +24,16 @@ This repository currently reflects the Phase 3 release of the project, including
 - SQLite save/load support through a repository-based data layer
 - Item selection and combat prompts with explicit cancel behavior
 
+## Since Phase 3
+
+- Inventory and Gear screens, opened with `i` / `g` or the buttons in the bottom-right corner
+- Six gear slots (weapon, helmet, chest, shield, boots, ring) shown on an ASCII figure; mages hold a staff
+- The shop sells staffs to mages and blades to warriors, at the same price and power
+- A character creation screen with the two classes side by side; hero names are capped at 16 characters
+- Click a menu option, list row, enemy or class card to fill in its command, then press Enter
+- Attack, Special, Flee and Item buttons during a fight, plus Esc, command history (Up / Down) and PageUp / PageDown
+- A hero who reaches the epilogue is marked on the load list as fallen to the God-King, and the ending isn't replayed
+
 ## Screen Recording
 
 Project walkthrough video:
@@ -85,8 +95,8 @@ When loading a save, choosing `0` returns the player to the main menu.
 - In-shop gold updates in real time after buying or selling
 - Item-use flow that supports `0`, `back`, or `cancel` to back out
 - Combat command prompts that switch context based on the current game state
-- Defeat prompt that allows the player to continue or delete the active character profile
-- Choosing `no` at the defeat prompt deletes the current save profile and returns the player to the main menu
+- Defeat prompt that lets the player rise again in Oakhaven for 50 gold, or let the hero go
+- Letting the hero go (`2`) deletes that save profile and returns the player to the main menu
 - Database initialization and schema migration support
 - Self-contained Windows publish output for standalone launch
 
