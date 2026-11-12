@@ -14,5 +14,9 @@ namespace ARDO.Game.Enemies
         public HollowCaptain() : base("Hollow Captain", 120, 20)
         {
         }
+
+        public override string ArtKey => "HollowCaptain";
+
+        public override string AttackLine => "drives a brutal captain's cut toward you.";
     }
 }

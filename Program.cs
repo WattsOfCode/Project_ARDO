@@ -24,9 +24,10 @@ namespace ARDO
             DatabaseConfig databaseConfig = new DatabaseConfig();
             databaseConfig.InitializeDatabase();
 
-            PlayerRepository playerRepository = new PlayerRepository(databaseConfig);
+            var playerRepository = new PlayerRepository(databaseConfig);
+            var questRepository = new QuestRepository(databaseConfig);
 
-            Application.Run(new StartMenuForm(playerRepository));
+            Application.Run(new StartMenuForm(playerRepository, questRepository));
         }
     }
 }

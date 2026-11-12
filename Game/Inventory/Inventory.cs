@@ -4,8 +4,8 @@
  * Project ARDO
  *
  * Class description:
- * `Inventory.cs` is a concrete composition class that stores a hero's items 
-    and exposes add, remove, and read methods. It uses private collection 
+ * `Inventory.cs` is a concrete composition class that stores a hero's items
+    and exposes add, remove, and read methods. It uses private collection
     storage and public item-management methods.
  */
 using System.Collections.Generic;
@@ -15,11 +15,15 @@ namespace ARDO.Game.Inventory
 {
     public class Inventory
     {
+        public const int DefaultCapacity = 20;
+
         private readonly List<GameItem> _items;
 
         public int Capacity { get; }
 
-        public Inventory(int capacity)
+        public bool IsFull => _items.Count >= Capacity;
+
+        public Inventory(int capacity = DefaultCapacity)
         {
             Capacity = capacity;
             _items = new List<GameItem>();
@@ -27,7 +31,7 @@ namespace ARDO.Game.Inventory
 
         public bool AddItem(GameItem item)
         {
-            if (_items.Count >= Capacity)
+            if (IsFull)
                 return false;
 
             _items.Add(item);

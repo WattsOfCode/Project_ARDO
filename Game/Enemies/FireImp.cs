@@ -14,5 +14,9 @@ namespace ARDO.Game.Enemies
         public FireImp() : base("Fire Imp", 48, 10, 20, 12)
         {
         }
+
+        public override string ArtKey => "FireImp";
+
+        public override string AttackLine => "hurls a burst of ember flame.";
     }
 }

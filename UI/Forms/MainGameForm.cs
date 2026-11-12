@@ -13,6 +13,7 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 using ARDO.Core.Abstracts;
+using ARDO.Data;
 using ARDO.Data.SQLite;
 using ARDO.Game;
 using ARDO.UI.Controls;
@@ -22,7 +23,8 @@ namespace ARDO.UI.Forms
 {
     public partial class MainGameForm : Form
     {
-        private readonly PlayerRepository _playerRepo;
+        private readonly IPlayerRepository _playerRepo;
+        private readonly QuestRepository _questRepo;
         private readonly GameMenu _mainMenu;
         private Hero? _activeHero;
         private readonly GameLaunchMode _launchMode;
@@ -36,9 +38,10 @@ namespace ARDO.UI.Forms
         private StatsPanel _statsPanel = null!;
         private GameStateManager? _gameState;
 
-        public MainGameForm(PlayerRepository playerRepo, GameLaunchMode launchMode = GameLaunchMode.MainMenu)
+        public MainGameForm(IPlayerRepository playerRepo, QuestRepository questRepo, GameLaunchMode launchMode = GameLaunchMode.MainMenu)
         {
             _playerRepo = playerRepo ?? throw new ArgumentNullException(nameof(playerRepo));
+            _questRepo = questRepo ?? throw new ArgumentNullException(nameof(questRepo));
             _launchMode = launchMode;
 
             InitializeWindowShell();
@@ -147,23 +150,13 @@ namespace ARDO.UI.Forms
                 return;
             }
 
-            _statsPanel.UpdateStats(
-                _activeHero.Name,
-                _activeHero.Level,
-                _activeHero.Experience,
-                _activeHero.ExperienceToNextLevel,
-                _activeHero.CurrentHealth,
-                _activeHero.MaxHealth,
-                _activeHero is ARDO.Game.Players.Mage mage ? mage.CurrentMana : 0,
-                _activeHero is ARDO.Game.Players.Mage mageWithMax ? mageWithMax.MaxMana : 0,
-                _activeHero.Gold
-            );
+            _statsPanel.UpdateStats(_activeHero);
         }
 
         private void HandleCharacterSelected(Hero hero)
         {
             _activeHero = hero ?? throw new ArgumentNullException(nameof(hero));
-            _gameState = new GameStateManager(this, _activeHero, _playerRepo);
+            _gameState = new GameStateManager(this, _activeHero, _playerRepo, _questRepo);
             _gameShell.Visible = true;
             _gameShell.BringToFront();
 

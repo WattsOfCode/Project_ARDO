@@ -15,5 +15,9 @@ namespace ARDO.Game.Enemies
         public Skeleton() : base("Skeleton", 55, 8, 25, 15)
         {
         }
+
+        public override string ArtKey => "skeleton";
+
+        public override string AttackLine => "rattles forward with a bone-sharp strike.";
     }
 }

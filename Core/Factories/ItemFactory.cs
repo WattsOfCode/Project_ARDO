@@ -4,8 +4,8 @@
  * Project ARDO
  *
  * Class description:
- * `ItemFactory.cs` is a static factory file that creates common game items 
-     for loot and shop use. It exposes creation methods.
+ * `ItemFactory.cs` is a static factory file that creates common game items
+     for loot drops. It exposes creation methods.
  */
 using ARDO.Core.Entities;
 using ARDO.Core.Enums;
@@ -33,18 +33,6 @@ namespace ARDO.Core.Factories
                 RarityType.Common,
                 50,
                 5
-            );
-        }
-
-        public static Armor CreateWoodShield()
-        {
-            return new Armor(
-                "Wood Shield",
-                "Simple defensive shield.",
-                RarityType.Common,
-                40,
-                3,
-                EquipmentSlot.Shield
             );
         }
     }

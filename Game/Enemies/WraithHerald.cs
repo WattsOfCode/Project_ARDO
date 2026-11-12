@@ -15,5 +15,9 @@ namespace ARDO.Game.Enemies
         public WraithHerald() : base("Wraith Herald", 110, 18)
         {
         }
+
+        public override string ArtKey => "WraithHerald";
+
+        public override string AttackLine => "lashes out with a cold phantom swipe.";
     }
 }

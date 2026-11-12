@@ -4,8 +4,8 @@
  * Project ARDO
  *
  * Class description:
- * `Mage.cs` is a concrete hero subclass that demonstrates polymorphic spell 
-    combat and mana-based abilities. It uses constructors, public combat 
+ * `Mage.cs` is a concrete hero subclass that demonstrates polymorphic spell
+    combat and mana-based abilities. It uses constructors, public combat
     methods, and inherited properties.
  */
 using System;
@@ -17,7 +17,12 @@ namespace ARDO.Game.Players
 {
     public class Mage : Hero
     {
-        private static readonly Random _random = new Random();
+        public const int FireboltCost = 15;
+        public const int LightningCascadeCost = 30;
+        public const int ArcaneWardCost = 10;
+
+        private const int LightningMinRoll = 22;
+        private const int LightningMaxRoll = 34;
 
         public int CurrentMana { get; set; }
         public int MaxMana { get; set; }
@@ -30,47 +35,32 @@ namespace ARDO.Game.Players
             Gold = 100;
         }
 
+        public override int BasicAttackDamage => 12 + Level + WeaponDamage + LevelAttackBonus + SpecialAttackBonus;
+
+        public int FireboltDamage => 24 + Level + WeaponDamage + SpecialAttackBonus;
+
+        private int LightningBonus => Level + WeaponDamage + SpecialAttackBonus;
+
         public override List<(string MoveName, string Type, string Description)> GetCombatMoves()
         {
             return new List<(string, string, string)>
             {
-                ("Firebolt", "Attack", $"Launch a blazing projectile. Deals {20 + Level + WeaponBonusDamage + SpecialAttackBonus} magic dmg. (Cost: 15 Mana)"),
-                ("Lightning Cascade", "Attack", $"Shock target dynamically. Deals 10 to {25 + WeaponBonusDamage + SpecialAttackBonus} random dmg. (Cost: 30 Mana)"),
-                ("Arcane Ward", "Defense", "Erect a magical shield that mitigates incoming damage. (Cost: 10 Mana)")
+                ("Firebolt", "Attack", $"Launch a blazing projectile. Deals {FireboltDamage} magic dmg. (Cost: {FireboltCost} Mana)"),
+                ("Lightning Cascade", "Attack", $"Shock the target. Deals {LightningMinRoll + LightningBonus} to {LightningMaxRoll + LightningBonus} dmg. (Cost: {LightningCascadeCost} Mana)"),
+                ("Arcane Ward", "Defense", $"Raise a shield that blunts the enemies' next attacks. (Cost: {ArcaneWardCost} Mana)")
             };
         }
 
-        public override void DisplayStatusCard()
+        // Mana each special move needs, by its menu number (1 to 3).
+        public static int ManaCostFor(int moveNumber)
         {
-            Console.WriteLine("========================");
-            Console.WriteLine($"Name: {Name} (Mage)");
-            Console.WriteLine($"Level: {Level}");
-            Console.WriteLine($"HP: {CurrentHealth}/{MaxHealth}");
-            Console.WriteLine($"Mana: {CurrentMana}/{MaxMana}");
-            Console.WriteLine($"Gold: {Gold}g");
-            Console.WriteLine($"Weapon Bonus: +{WeaponBonusDamage} ATK");
-            Console.WriteLine($"Shield Bonus: +{ShieldBonusDefense} DEF");
-            if (InvulnerabilityCharges > 0)
+            return moveNumber switch
             {
-                Console.WriteLine($"INVULNERABILITY CHARGES: {InvulnerabilityCharges}");
-            }
-            Console.WriteLine("========================");
-        }
-
-        public override void ExecuteSpecial(ICombatant target)
-        {
-            CastFirebolt(target);
-        }
-
-        public override void Attack(ICombatant target)
-        {
-            if (target == null)
-            {
-                return;
-            }
-
-            int damage = 12 + Level + WeaponBonusDamage + LevelAttackBonus + SpecialAttackBonus;
-            target.TakeDamage(damage);
+                1 => FireboltCost,
+                2 => LightningCascadeCost,
+                3 => ArcaneWardCost,
+                _ => 0
+            };
         }
 
         protected override void OnLevelUp()
@@ -80,54 +70,47 @@ namespace ARDO.Game.Players
             CurrentMana = MaxMana;
         }
 
+        public override void RestoreForTown()
+        {
+            base.RestoreForTown();
+            CurrentMana = MaxMana;
+        }
+
         public string CastFirebolt(ICombatant target)
         {
-            if (target == null)
-            {
-                return $"{Name} has no target for Firebolt.";
-            }
-
-            const int manaCost = 15;
-            if (CurrentMana < manaCost)
+            if (CurrentMana < FireboltCost)
             {
                 return $"{Name} tries to cast Firebolt but lacks mana.";
             }
 
-            CurrentMana -= manaCost;
-            int damage = 24 + Level + WeaponBonusDamage + SpecialAttackBonus;
+            CurrentMana -= FireboltCost;
+            int damage = FireboltDamage;
             target.TakeDamage(damage);
             return $"{Name} hurls Firebolt for {damage} damage. Mana {CurrentMana}/{MaxMana}.";
         }
 
         public string CastLightningCascade(ICombatant target)
         {
-            if (target == null)
-            {
-                return $"{Name} has no target for Lightning Cascade.";
-            }
-
-            const int manaCost = 30;
-            if (CurrentMana < manaCost)
+            if (CurrentMana < LightningCascadeCost)
             {
                 return $"{Name} tries to call Lightning Cascade but lacks mana.";
             }
 
-            CurrentMana -= manaCost;
-            int damage = _random.Next(22, 35) + Level + WeaponBonusDamage + SpecialAttackBonus;
+            CurrentMana -= LightningCascadeCost;
+            int damage = Random.Shared.Next(LightningMinRoll, LightningMaxRoll + 1) + LightningBonus;
             target.TakeDamage(damage);
             return $"{Name} unleashes Lightning Cascade for {damage} damage. Mana {CurrentMana}/{MaxMana}.";
         }
 
         public string CastArcaneWard()
         {
-            const int manaCost = 10;
-            if (CurrentMana < manaCost)
+            if (CurrentMana < ArcaneWardCost)
             {
                 return $"{Name} tries to raise Arcane Ward but lacks mana.";
             }
 
-            CurrentMana -= manaCost;
-            ShieldBonusDefense += 3;
+            CurrentMana -= ArcaneWardCost;
+            GuardDefense += 3;
             InvulnerabilityCharges += 1;
             return $"{Name} weaves Arcane Ward. Defense rises and one strike can be turned aside. Mana {CurrentMana}/{MaxMana}.";
         }

@@ -18,7 +18,8 @@ using System.Windows.Forms;
 using ARDO.Core.Abstracts;
 using ARDO.Core.Entities;
 using ARDO.Core.Enums;
-using ARDO.Data.SQLite;
+using ARDO.Data;
+using ARDO.Game.Inventory;
 
 namespace ARDO.UI.Controls
 {
@@ -27,7 +28,7 @@ namespace ARDO.UI.Controls
         private sealed record ShopOffer(string DisplayName, int BuyPrice, Func<GameItem> CreateItem, string Description);
 
         private readonly Hero _hero;
-        private readonly PlayerRepository _playerRepo;
+        private readonly IPlayerRepository _playerRepo;
         private readonly Action? _refreshStatus;
         private readonly List<ShopOffer> _shopOffers = new();
 
@@ -39,7 +40,7 @@ namespace ARDO.UI.Controls
 
         public event EventHandler? CloseRequested;
 
-        public ShopPanel(Hero hero, PlayerRepository playerRepo, Action? refreshStatus = null)
+        public ShopPanel(Hero hero, IPlayerRepository playerRepo, Action? refreshStatus = null)
         {
             _hero = hero ?? throw new ArgumentNullException(nameof(hero));
             _playerRepo = playerRepo ?? throw new ArgumentNullException(nameof(playerRepo));
@@ -177,7 +178,7 @@ namespace ARDO.UI.Controls
             _feedbackLabel = new Label
             {
                 Dock = DockStyle.Fill,
-                Text = "Shop is open. Use the input panel below to trade items or leave the shop.",
+                Text = "Shop is open. Commands: buy 1, sell 1, sell all, equip 1, unequip 1, exit.",
                 ForeColor = Color.WhiteSmoke,
                 BackColor = Color.Black,
                 Font = new Font("Consolas", 11, FontStyle.Regular),
@@ -262,7 +263,7 @@ namespace ARDO.UI.Controls
             string[] parts = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length < 2)
             {
-                ShowFeedback("Use buy 1, sell 1, sell all, or type exit.");
+                ShowFeedback("Use buy 1, sell 1, sell all, equip 1, unequip 1, or type exit.");
                 return;
             }
 
@@ -270,7 +271,7 @@ namespace ARDO.UI.Controls
             string indexText = parts[1];
             if (!int.TryParse(indexText, out int selection))
             {
-                ShowFeedback("That choice needs a number, like buy 1 or sell 2.");
+                ShowFeedback("That choice needs a number, like buy 1, sell 2 or equip 3.");
                 return;
             }
 
@@ -284,8 +285,16 @@ namespace ARDO.UI.Controls
                 case "s":
                     SellItem(selection);
                     break;
+                case "equip":
+                case "e":
+                    EquipItem(selection);
+                    break;
+                case "unequip":
+                case "u":
+                    UnequipItem(selection);
+                    break;
                 default:
-                    ShowFeedback("Unknown command. Use buy 1, sell 1, sell all, or exit.");
+                    ShowFeedback("Unknown command. Use buy 1, sell 1, sell all, equip 1, unequip 1, or exit.");
                     break;
             }
         }
@@ -316,10 +325,20 @@ namespace ARDO.UI.Controls
 
                 _hero.Gold -= offer.BuyPrice;
                 _playerRepo.SaveInventoryItem(_hero.CharacterId, item);
-                _playerRepo.SaveGameState(_hero, _hero.ActiveStoryNode);
-                RefreshView();
+
+                bool equipped = false;
+                if (_hero.Equipment.IsUpgrade(item))
+                {
+                    _hero.Equipment.Equip(item);
+                    _playerRepo.SaveEquipment(_hero);
+                    equipped = true;
+                }
+
+                _playerRepo.SaveGameState(_hero);
                 _refreshStatus?.Invoke();
-                ShowFeedback($"Bought {item.Name} for {offer.BuyPrice} gold.");
+                ShowFeedback(equipped
+                    ? $"Bought {item.Name} for {offer.BuyPrice} gold and equipped it."
+                    : $"Bought {item.Name} for {offer.BuyPrice} gold.");
             }
             catch (Exception ex)
             {
@@ -348,7 +367,7 @@ namespace ARDO.UI.Controls
                 GameItem item = items[selection - 1];
                 if (item.IsEquipped)
                 {
-                    ShowFeedback("Unequip that item before selling it.");
+                    ShowFeedback($"Unequip that item first: unequip {selection}.");
                     return;
                 }
 
@@ -356,8 +375,7 @@ namespace ARDO.UI.Controls
                 _hero.HeroInventory.RemoveItem(item);
                 _playerRepo.RemoveInventoryItem(_hero.CharacterId, item.ItemId);
                 _hero.Gold += saleValue;
-                _playerRepo.SaveGameState(_hero, _hero.ActiveStoryNode);
-                RefreshView();
+                _playerRepo.SaveGameState(_hero);
                 _refreshStatus?.Invoke();
                 ShowFeedback($"Sold {item.Name} for {saleValue} gold.");
             }
@@ -401,12 +419,11 @@ namespace ARDO.UI.Controls
 
                 if (soldCount == 0)
                 {
-                    ShowFeedback("Unequip your items before selling them.");
+                    ShowFeedback("Only equipped items are left. Unequip one first to sell it.");
                     return;
                 }
 
-                _playerRepo.SaveGameState(_hero, _hero.ActiveStoryNode);
-                RefreshView();
+                _playerRepo.SaveGameState(_hero);
                 _refreshStatus?.Invoke();
 
                 if (skippedEquipped > 0)
@@ -425,9 +442,66 @@ namespace ARDO.UI.Controls
             }
         }
 
+        private void EquipItem(int selection)
+        {
+            GameItem? item = GetPlayerItem(selection);
+            if (item == null)
+                return;
+
+            if (!EquipmentManager.CanEquip(item))
+            {
+                ShowFeedback($"{item.Name} can't be equipped. Only weapons and armor can.");
+                return;
+            }
+
+            if (item.IsEquipped)
+            {
+                ShowFeedback($"{item.Name} is already equipped.");
+                return;
+            }
+
+            GameItem? replaced = _hero.Equipment.Equip(item);
+            _playerRepo.SaveEquipment(_hero);
+            _refreshStatus?.Invoke();
+            ShowFeedback(replaced != null
+                ? $"Equipped {item.Name} in place of {replaced.Name}."
+                : $"Equipped {item.Name}.");
+        }
+
+        private void UnequipItem(int selection)
+        {
+            GameItem? item = GetPlayerItem(selection);
+            if (item == null)
+                return;
+
+            if (!_hero.Equipment.Unequip(item))
+            {
+                ShowFeedback($"{item.Name} isn't equipped.");
+                return;
+            }
+
+            _playerRepo.SaveEquipment(_hero);
+            _refreshStatus?.Invoke();
+            ShowFeedback($"Unequipped {item.Name}.");
+        }
+
+        private GameItem? GetPlayerItem(int selection)
+        {
+            List<GameItem> items = _hero.HeroInventory.GetItems();
+            if (selection < 1 || selection > items.Count)
+            {
+                ShowFeedback(items.Count == 0
+                    ? "You have no items."
+                    : $"Choose a player item from 1 to {items.Count}.");
+                return null;
+            }
+
+            return items[selection - 1];
+        }
+
         private void RefreshView()
         {
-            _playerGoldLabel.Text = $"Player Gold: {_hero.Gold}g";
+            _playerGoldLabel.Text = $"Gold: {_hero.Gold}g | ATK +{_hero.WeaponDamage} | DEF +{_hero.Equipment.DefenseBonus}";
 
             _playerItemsList.BeginUpdate();
             _playerItemsList.Items.Clear();
@@ -442,7 +516,13 @@ namespace ARDO.UI.Controls
                 {
                     GameItem item = inventoryItems[i];
                     string equipped = item.IsEquipped ? " [equipped]" : string.Empty;
-                    string extra = item.ItemType == ItemType.Consumable ? $" [heal {item.HealAmount}]" : string.Empty;
+                    string extra = item switch
+                    {
+                        Weapon weapon => $" [+{weapon.DamageBonus} ATK]",
+                        Armor armor => $" [+{armor.DefenseBonus} DEF]",
+                        Consumable consumable => $" [heal {consumable.HealAmount}]",
+                        _ => string.Empty
+                    };
                     _playerItemsList.Items.Add($"{i + 1}. {item}{equipped}{extra}");
                 }
             }

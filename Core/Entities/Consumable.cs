@@ -29,7 +29,6 @@ namespace ARDO.Core.Entities
                 healAmount)
         {
             HealAmount = healAmount;
-            Consumable = true;
             StatModifier = healAmount;
         }
     }

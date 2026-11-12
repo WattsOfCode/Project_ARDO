@@ -9,7 +9,8 @@ This repository currently reflects the Phase 3 release of the project, including
 - Text-driven RPG gameplay with town, shop, combat, and defeat flows
 - `Warrior` and `Mage` hero classes
 - Enemy encounters including goblins, fire imps, wraith heralds, and hollow captains
-- A command-driven town shop with `buy`, `sell`, `sell all`, and `exit`
+- A command-driven town shop with `buy`, `sell`, `sell all`, `equip`, `unequip`, and `exit`
+- Weapons and armor that can be equipped, add to attack and defense, and stay equipped across saves
 - Real-time inventory and gold updates
 - SQLite save/load support through a repository-based data layer
 - Item selection and combat prompts with explicit cancel behavior
@@ -31,11 +32,14 @@ Project walkthrough video:
 
 ### Option 2: Run the Published Build
 
-1. Open the `publish/win-x64` folder.
-2. Launch `ARDO.exe`.
-3. The published build is self-contained, so no separate .NET runtime installation should be required.
+1. Download `ARDO.exe` from the [Releases](https://github.com/WattsOfCode/Project_ARDO/releases) page.
+2. Double-click it. The build is self-contained, so no .NET runtime installation is needed.
 
-Note: Run as administrator 
+To make the build yourself, run `dotnet publish -p:PublishProfile=WinSelfContained`. It is written to
+`publish/win-x64`, which is not committed to git.
+
+Saves are kept in `%LocalAppData%\ARDO\ardo.db`, so the game runs from any folder without administrator
+rights. A save file next to an older build of the game is copied there on first launch.
 
 ## Application Start Flow
 
@@ -67,7 +71,8 @@ When loading a save, choosing `0` returns the player to the main menu.
 - ASCII art support for heroes and enemies
 - Separate panels for narrative, character art, and stats
 - Factory classes for enemy and item creation
-- Command-driven town shop with `buy`, `sell`, `sell all`, and `exit`
+- Command-driven town shop with `buy`, `sell`, `sell all`, `equip`, `unequip`, and `exit`
+- Better weapons and armor are equipped automatically when bought or looted
 - In-shop gold updates in real time after buying or selling
 - Item-use flow that supports `0`, `back`, or `cancel` to back out
 - Combat command prompts that switch context based on the current game state

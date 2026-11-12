@@ -14,5 +14,9 @@ namespace ARDO.Game.Enemies
         public Goblin() : base("Goblin", 40, 6, 15, 10)
         {
         }
+
+        public override string ArtKey => "goblin";
+
+        public override string AttackLine => "lunges with a jagged blade.";
     }
 }

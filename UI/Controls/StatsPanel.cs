@@ -9,6 +9,8 @@
  */
 using System.Drawing;
 using System.Windows.Forms;
+using ARDO.Core.Abstracts;
+using ARDO.Game.Players;
 
 namespace ARDO.UI.Controls
 {
@@ -45,34 +47,31 @@ namespace ARDO.UI.Controls
             Controls.Add(_statsBox);
         }
 
-        public void UpdateStats(
-            string name,
-            int level,
-            int experience,
-            int experienceToNextLevel,
-            int currentHealth,
-            int maxHealth,
-            int currentMana,
-            int maxMana,
-            int gold)
+        public void UpdateStats(Hero hero)
         {
-            string manaLine = maxMana > 0
-                ? $"\nMana:     {currentMana}/{maxMana}"
+            string manaLine = hero is Mage mage
+                ? $"\nMana:     {mage.CurrentMana}/{mage.MaxMana}"
                 : string.Empty;
+
+            string weapon = hero.Equipment.EquippedWeapon?.Name ?? "none";
+            string armor = hero.Equipment.EquippedArmor?.Name ?? "none";
 
             _statsBox.Text =
 $@"================================
  HERO STATUS
 ================================
 
-Name:     {name}
+Name:     {hero.Name}
 
-Level:    {level}
-XP:       {experience}/{experienceToNextLevel}
+Level:    {hero.Level}
+XP:       {hero.Experience}/{hero.ExperienceToNextLevel}
 
-Health:   {currentHealth}/{maxHealth}{manaLine}
+Health:   {hero.CurrentHealth}/{hero.MaxHealth}{manaLine}
 
-Gold:     {gold}
+Weapon:   {weapon} (+{hero.WeaponDamage} ATK)
+Armor:    {armor} (+{hero.Equipment.DefenseBonus} DEF)
+
+Gold:     {hero.Gold}
 
 ================================";
             _statsBox.SelectionStart = _statsBox.TextLength;

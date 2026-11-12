@@ -11,21 +11,24 @@
 using System;
 using System.Drawing;
 using System.Windows.Forms;
+using ARDO.Data;
 using ARDO.Data.SQLite;
 
 namespace ARDO.UI.Forms
 {
     public class StartMenuForm : Form
     {
-        private readonly PlayerRepository _playerRepo;
+        private readonly IPlayerRepository _playerRepo;
+        private readonly QuestRepository _questRepo;
         private RichTextBox _titleBox = null!;
         private Label _optionsLabel = null!;
         private Label _commandLabel = null!;
         private TextBox _commandInput = null!;
 
-        public StartMenuForm(PlayerRepository playerRepo)
+        public StartMenuForm(IPlayerRepository playerRepo, QuestRepository questRepo)
         {
             _playerRepo = playerRepo ?? throw new ArgumentNullException(nameof(playerRepo));
+            _questRepo = questRepo ?? throw new ArgumentNullException(nameof(questRepo));
 
             InitializeWindowShell();
             BuildInterface();
@@ -171,7 +174,7 @@ namespace ARDO.UI.Forms
 
         private void LaunchGame(GameLaunchMode mode)
         {
-            var gameForm = new MainGameForm(_playerRepo, mode);
+            var gameForm = new MainGameForm(_playerRepo, _questRepo, mode);
             gameForm.FormClosed += (_, __) =>
             {
                 Show();

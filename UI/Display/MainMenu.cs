@@ -11,7 +11,7 @@
 using System;
 using System.Data;
 using ARDO.Core.Abstracts;
-using ARDO.Data.SQLite;
+using ARDO.Data;
 using ARDO.UI.Forms;
 
 namespace ARDO.UI.Display
@@ -19,7 +19,7 @@ namespace ARDO.UI.Display
     public class MainMenu
     {
         private readonly MainGameForm _form;
-        private readonly PlayerRepository _playerRepo;
+        private readonly IPlayerRepository _playerRepo;
 
         private enum MenuState { MainOptions, NamingCharacter, ChoosingClass, LoadingSlot }
         private MenuState _currentState = MenuState.MainOptions;
@@ -29,7 +29,7 @@ namespace ARDO.UI.Display
 
         public event Action<Hero>? CharacterSelected;
 
-        public MainMenu(MainGameForm form, PlayerRepository playerRepo)
+        public MainMenu(MainGameForm form, IPlayerRepository playerRepo)
         {
             _form = form ?? throw new ArgumentNullException(nameof(form));
             _playerRepo = playerRepo ?? throw new ArgumentNullException(nameof(playerRepo));

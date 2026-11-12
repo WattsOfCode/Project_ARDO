@@ -14,10 +14,10 @@ using System.Collections.Generic;
 using ARDO.Core.Abstracts;
 using ARDO.Core.Entities;
 using ARDO.Core.Enums;
+using ARDO.Data;
 using ARDO.Data.SQLite;
 using ARDO.Game.Combat;
 using ARDO.Game.Inventory;
-using ARDO.Game.Enemies;
 using ARDO.UI.Controls;
 using ARDO.UI.Forms;
 
@@ -27,7 +27,7 @@ namespace ARDO.Game
     {
         private readonly MainGameForm _ui;
         private readonly Hero _hero;
-        private readonly PlayerRepository _playerRepo;
+        private readonly IPlayerRepository _playerRepo;
         private readonly QuestRepository _questRepo;
         private readonly CombatEngine _combatEngine;
         private int _encountersRemainingInRun;
@@ -35,12 +35,12 @@ namespace ARDO.Game
 
         public GameState CurrentState { get; private set; } = GameState.Town;
 
-        public GameStateManager(MainGameForm ui, Hero hero, PlayerRepository playerRepo)
+        public GameStateManager(MainGameForm ui, Hero hero, IPlayerRepository playerRepo, QuestRepository questRepo)
         {
             _ui = ui;
             _hero = hero;
             _playerRepo = playerRepo;
-            _questRepo = new QuestRepository(new DatabaseConfig());
+            _questRepo = questRepo ?? throw new ArgumentNullException(nameof(questRepo));
 
             _combatEngine = new CombatEngine(_ui, _playerRepo);
         }
@@ -119,12 +119,6 @@ namespace ARDO.Game
             ShowTownMenu();
         }
 
-        public void EnterCombat(Enemy enemy)
-        {
-            CurrentState = GameState.Combat;
-            _combatEngine.StartEncounter(_hero, enemy);
-        }
-
         public void EnterCombat(IReadOnlyList<Enemy> enemies)
         {
             CurrentState = GameState.Combat;
@@ -164,6 +158,9 @@ namespace ARDO.Game
                 case "1":
                 case "buy":
                 case "shop":
+                case "gear":
+                case "equip":
+                case "inventory":
                     OpenTownShop();
                     return;
 
@@ -181,7 +178,7 @@ namespace ARDO.Game
 
                 case "4":
                 case "save":
-                    _playerRepo.SaveGameState(_hero, _hero.ActiveStoryNode);
+                    _playerRepo.SaveGameState(_hero);
                     _ui.AppendNarrative("[SYSTEM] Game state saved to SQLite.");
                     _ui.AppendNarrative("");
                     return;
@@ -227,7 +224,8 @@ namespace ARDO.Game
                     if (_combatEngine.FinalBossEndingPlayed)
                     {
                         CurrentState = GameState.GameOver;
-                        _ui.AppendNarrative("Press any key to return to the start screen.");
+                        _ui.SetCommandContext("Type anything and press Enter to return to the start screen.");
+                        _ui.AppendNarrative("The epilogue is complete. Type anything and press Enter to return to the start screen.");
                         return;
                     }
 
@@ -235,10 +233,7 @@ namespace ARDO.Game
                     return;
                 }
 
-                if (HandlePostCombatVictory())
-                {
-                    return;
-                }
+                HandlePostCombatVictory();
 
                 if (_encountersRemainingInRun > 0)
                 {
@@ -252,33 +247,34 @@ namespace ARDO.Game
             }
         }
 
-        private bool HandlePostCombatVictory()
+        private void HandlePostCombatVictory()
         {
             GameItem? loot = LootGenerator.GenerateLoot();
 
             if (loot != null)
             {
                 _ui.AppendNarrative("");
-                _hero.HeroInventory.AddItem(loot);
-                _playerRepo.SaveInventoryItem(_hero.CharacterId, loot);
-                _ui.AppendNarrative($"Loot acquired: {loot.Name}");
-            }
+                if (_hero.HeroInventory.AddItem(loot))
+                {
+                    _playerRepo.SaveInventoryItem(_hero.CharacterId, loot);
+                    _ui.AppendNarrative($"Loot acquired: {loot.Name}");
 
-            QuestRepository.QuestSummary? quest = _questRepo.GetQuestSummary(_hero.ActiveStoryNode);
-            if (quest != null && quest.IsFinalNode)
-            {
-                _ui.AppendNarrative("");
-                _ui.AppendNarrative("The final chamber should have ended the world.");
-                _ui.AppendNarrative("The First King falls silent, and the cavern keeps your last breath as a relic.");
-                _playerRepo.SaveGameState(_hero, _hero.ActiveStoryNode);
-                CurrentState = GameState.GameOver;
-                return true;
+                    // Wear found gear right away when it beats what is equipped.
+                    if (_hero.Equipment.IsUpgrade(loot))
+                    {
+                        _hero.Equipment.Equip(loot);
+                        _playerRepo.SaveEquipment(_hero);
+                        _ui.AppendNarrative($"You equip the {loot.Name}.");
+                    }
+                }
+                else
+                {
+                    _ui.AppendNarrative($"You find {loot.Name}, but your pack is full. Sell something in town to make room.");
+                }
             }
 
             _encountersRemainingInRun = Math.Max(0, _encountersRemainingInRun - 1);
-
-            _playerRepo.SaveGameState(_hero, _hero.ActiveStoryNode);
-            return false;
+            _playerRepo.SaveGameState(_hero);
         }
 
         private void CompleteDungeonRun()
@@ -288,17 +284,17 @@ namespace ARDO.Game
             {
                 _ui.AppendNarrative("");
                 _ui.AppendNarrative("The dungeon section collapses behind you. Town will mark the next descent.");
-                _hero.ActiveStoryNode++;
+                _hero.ActiveStoryNode = Math.Min(EncounterTable.FinalQuestId, _hero.ActiveStoryNode + 1);
                 _ui.AppendNarrative($"Your journey advances to quest node {_hero.ActiveStoryNode}.");
             }
 
-            _playerRepo.SaveGameState(_hero, _hero.ActiveStoryNode);
+            _playerRepo.SaveGameState(_hero);
             EnterTown();
         }
 
         private void ShowTownMenu()
         {
-            _ui.SetCommandContext("Town commands: 1 buy from shop, 2 rest at inn, 3 enter dungeon, 4 save game, 5 exit to main menu.");
+            _ui.SetCommandContext("Town commands: 1 shop and gear, 2 rest at inn (10g), 3 enter dungeon, 4 save game, 5 exit to main menu.");
             _ui.AppendNarrative("");
             _ui.AppendNarrative("Oakhaven settles around you. The merchant waits nearby, the inn is warm, and the dungeon still looms below.");
             _ui.AppendNarrative("Choose your next action using the input panel below.");
@@ -336,24 +332,17 @@ namespace ARDO.Game
 
             _hero.Gold -= 10;
             _hero.RestoreForTown();
-
-            if (_hero is ARDO.Game.Players.Mage mage)
-            {
-                mage.CurrentMana = mage.MaxMana;
-            }
-
-            _hero.IsRestingInSafety = true;
             _ui.AppendNarrative("");
             _ui.AppendNarrative("You rest at the inn and recover your strength.");
             _ui.AppendNarrative($"You now have {_hero.CurrentHealth}/{_hero.MaxHealth} HP.");
-            _playerRepo.SaveGameState(_hero, _hero.ActiveStoryNode);
+            _playerRepo.SaveGameState(_hero);
             _ui.UpdateVisualMetricsDisplay();
         }
 
         private void StartDungeonRun()
         {
             QuestRepository.QuestSummary? quest = _questRepo.GetQuestSummary(_hero.ActiveStoryNode);
-            _encountersRemainingInRun = GetEncounterCountForQuest(_hero.ActiveStoryNode);
+            _encountersRemainingInRun = EncounterTable.FightsPerRun(_hero.ActiveStoryNode);
 
             _ui.AppendNarrative("");
             _ui.AppendNarrative(quest != null
@@ -365,7 +354,7 @@ namespace ARDO.Game
 
         private void StartNextDungeonEncounter()
         {
-            IReadOnlyList<Enemy> encounterGroup = _questRepo.GetEncounterGroupForQuest(_hero.ActiveStoryNode);
+            IReadOnlyList<Enemy> encounterGroup = EncounterTable.RollGroup(_hero.ActiveStoryNode);
 
             if (_encountersRemainingInRun > 0)
             {
@@ -374,18 +363,6 @@ namespace ARDO.Game
             }
 
             EnterCombat(encounterGroup);
-        }
-
-        private static int GetEncounterCountForQuest(int questId)
-        {
-            return questId switch
-            {
-                1 => 2,
-                2 => 3,
-                3 => 3,
-                4 => 1,
-                _ => 2
-            };
         }
 
         private void HandleDefeatStart()
@@ -406,13 +383,7 @@ namespace ARDO.Game
                 case "1":
                     _hero.Gold = Math.Max(0, _hero.Gold - 50);
                     _hero.RestoreForTown();
-                    if (_hero is ARDO.Game.Players.Mage mage)
-                    {
-                        mage.CurrentMana = mage.MaxMana;
-                    }
-
-                    _hero.IsRestingInSafety = true;
-                    _playerRepo.SaveGameState(_hero, _hero.ActiveStoryNode);
+                    _playerRepo.SaveGameState(_hero);
                     _ui.AppendNarrative("");
                     _ui.AppendNarrative("Rise, hero. There is still much more for you to do.");
                     _ui.AppendNarrative("");
@@ -439,7 +410,7 @@ namespace ARDO.Game
         {
             _ui.AppendNarrative("");
             _ui.AppendNarrative("You break away from the dungeon floor and retreat to Oakhaven before it can close.");
-            _playerRepo.SaveGameState(_hero, _hero.ActiveStoryNode);
+            _playerRepo.SaveGameState(_hero);
             EnterTown();
         }
 

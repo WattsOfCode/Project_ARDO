@@ -4,7 +4,7 @@
  * Project ARDO
  *
  * Class description:
- * `EnemyFactory.cs` is a static factory file that creates concrete enemy instances 
+ * `EnemyFactory.cs` is a static factory file that creates concrete enemy instances
     for encounters. It exposes creation methods.
  */
 using System;
@@ -16,38 +16,6 @@ namespace ARDO.Core.Factories
 {
     public static class EnemyFactory
     {
-        public static Enemy Create(string enemyKey)
-        {
-            switch (enemyKey.ToLower())
-            {
-                case "goblin":
-                    return new Goblin();
-
-                case "skeleton":
-                    return new Skeleton();
-
-                case "fireimp":
-                case "fire imp":
-                    return new FireImp();
-
-                case "wraithherald":
-                case "wraith herald":
-                    return new WraithHerald();
-
-                case "hollowcaptain":
-                case "hollow captain":
-                    return new HollowCaptain();
-
-                case "alhuezo":
-                    return new Boss("Alhuezo, the First King", 999, 80);
-
-                default:
-                    throw new ArgumentException(
-                        $"Unknown enemy key: {enemyKey}"
-                    );
-            }
-        }
-
         public static Enemy Create(EnemyType enemyType)
         {
             return enemyType switch
@@ -57,7 +25,7 @@ namespace ARDO.Core.Factories
                 EnemyType.FireImp => new FireImp(),
                 EnemyType.WraithHerald => new WraithHerald(),
                 EnemyType.HollowCaptain => new HollowCaptain(),
-                EnemyType.Alhuezo => new Boss("Alhuezo, the First King", 999, 80),
+                EnemyType.Alhuezo => new Alhuezo(),
                 _ => throw new ArgumentOutOfRangeException(nameof(enemyType))
             };
         }

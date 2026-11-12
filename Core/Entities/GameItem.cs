@@ -31,13 +31,9 @@ namespace ARDO.Core.Entities
 
         public bool IsEquipped { get; set; }
 
-        public int AttackBonus { get; set; }
-
         public int DefenseBonus { get; set; }
 
         public int HealAmount { get; set; }
-
-        public bool Consumable { get; set; }
 
         public GameItem(
             string name,
@@ -59,8 +55,7 @@ namespace ARDO.Core.Entities
 
         public override string ToString()
         {
-            string modifier = StatModifier != 0 ? $" ({StatModifier:+#;-#;0})" : string.Empty;
-            return $"[{Rarity}] {Name}{modifier}";
+            return $"[{Rarity}] {Name}";
         }
     }
 }

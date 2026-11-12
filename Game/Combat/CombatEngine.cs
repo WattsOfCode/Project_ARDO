@@ -4,18 +4,18 @@
  * Project ARDO
  *
  * Class description:
- * `CombatEngine.cs` is a concrete combat controller that drives turn-based 
-    encounters through polymorphic hero and enemy behavior. It uses public 
-    combat methods, private battle state, and repository saves after fights, 
+ * `CombatEngine.cs` is a concrete combat controller that drives turn-based
+    encounters through polymorphic hero and enemy behavior. It uses public
+    combat methods, private battle state, and repository saves after fights,
     while CRUD itself stays in the data layer.
  */
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using ARDO.Core.Abstracts;
-using ARDO.Core.Interfaces;
 using ARDO.Core.Entities;
-using ARDO.Data.SQLite;
+using ARDO.Data;
+using ARDO.Game.Enemies;
 using ARDO.Game.Players;
 using ARDO.UI.Forms;
 
@@ -23,49 +23,48 @@ namespace ARDO.Game.Combat
 {
     public class CombatEngine
     {
+        private const int SpecialCooldownTurns = 2;
+        private const int FinalBossScriptedRounds = 2;
+
         private readonly MainGameForm _form;
-        private readonly PlayerRepository _playerRepo;
+        private readonly IPlayerRepository _playerRepo;
         private readonly List<Enemy> _enemies = new();
         private Hero _player = null!;
         private bool _isFinalBossEncounter;
         private int _finalBossRounds;
-        private bool _finalBossEndingPlayed;
         private int _specialCooldownTurnsRemaining;
         private bool _awaitingSpecialChoice;
         private bool _awaitingItemChoice;
         private List<Consumable> _pendingConsumables = new();
-        public bool LastActionWasFleeSuccessful { get; private set; }
+        private Enemy? _shownEnemy;
 
         private enum PlayerActionOutcome
         {
-            ContinueTurn,
+            TurnSpent,
             Fled,
             NoTurnSpent
         }
 
         public bool IsCombatActive { get; private set; }
 
-        public bool FinalBossEndingPlayed => _finalBossEndingPlayed;
+        public bool LastActionWasFleeSuccessful { get; private set; }
 
-        public CombatEngine(MainGameForm form, PlayerRepository playerRepo)
+        public bool FinalBossEndingPlayed { get; private set; }
+
+        public CombatEngine(MainGameForm form, IPlayerRepository playerRepo)
         {
             _form = form ?? throw new ArgumentNullException(nameof(form));
             _playerRepo = playerRepo ?? throw new ArgumentNullException(nameof(playerRepo));
         }
 
-        public void StartEncounter(Hero player, Enemy enemy)
-        {
-            StartEncounter(player, new[] { enemy });
-        }
-
         public void StartEncounter(Hero player, IReadOnlyList<Enemy> enemies)
         {
-            _player = player;
+            _player = player ?? throw new ArgumentNullException(nameof(player));
             _enemies.Clear();
             _enemies.AddRange(enemies?.Where(enemy => enemy != null) ?? Array.Empty<Enemy>());
             if (_enemies.Count == 0)
             {
-                _enemies.Add(new ARDO.Game.Enemies.Goblin());
+                _enemies.Add(new Goblin());
             }
 
             foreach (Enemy enemy in _enemies)
@@ -73,22 +72,22 @@ namespace ARDO.Game.Combat
                 enemy.CombatFloor = _player.ActiveStoryNode;
             }
 
+            _player.ClearGuard();
             IsCombatActive = true;
-            _isFinalBossEncounter = _enemies.Any(enemy => enemy.Name.Contains("Alhuezo", StringComparison.OrdinalIgnoreCase));
+            _isFinalBossEncounter = _enemies.Any(enemy => enemy is Alhuezo);
             _finalBossRounds = 0;
-            _finalBossEndingPlayed = false;
+            FinalBossEndingPlayed = false;
             _specialCooldownTurnsRemaining = 0;
             _awaitingSpecialChoice = false;
             _awaitingItemChoice = false;
             _pendingConsumables.Clear();
+            _shownEnemy = null;
             LastActionWasFleeSuccessful = false;
 
-            _form.SetCommandContext("Combat commands: 1 attack, 2 special, 3 flee, 4 item.");
             _form.AppendNarrative("");
             _form.AppendNarrative("==========================================================");
             _form.AppendNarrative($"COMBAT INITIATED: {_player.Name} vs {_enemies.Count} foe(s)");
             _form.AppendNarrative("==========================================================");
-            ShowActiveEnemy();
 
             _form.AppendNarrative($"The dungeon answers with {_enemies.Count} presence(s).");
             if (_isFinalBossEncounter)
@@ -108,7 +107,7 @@ namespace ARDO.Game.Combat
 
         public void ExecuteTurn(string playerChoice)
         {
-            if (!IsCombatActive || !_player.IsAlive || !HasLivingEnemies())
+            if (!IsCombatActive || !_player.IsAlive)
                 return;
 
             Enemy? activeEnemy = GetActiveEnemy();
@@ -118,131 +117,38 @@ namespace ARDO.Game.Combat
                 return;
             }
 
+            string choice = (playerChoice ?? string.Empty).Trim().ToLowerInvariant();
+            bool turnSpent;
+
             if (_awaitingSpecialChoice)
             {
-                if (!ProcessSpecialChoice(playerChoice, _player, activeEnemy))
-                {
-                    return;
-                }
-
-                _awaitingSpecialChoice = false;
-
-                if (!HasLivingEnemies())
-                {
-                    ResolveEncounter();
-                    return;
-                }
-
-                if (_isFinalBossEncounter)
-                {
-                    ResolveFinalBossTurn(activeEnemy);
-                    return;
-                }
-
-                _form.AppendNarrative("");
-                foreach (Enemy enemy in _enemies.Where(enemy => enemy.IsAlive))
-                {
-                    _form.AppendNarrative($"[{enemy.Name}'s turn]");
-                    int beforeHealth = _player.CurrentHealth;
-                    enemy.ExecuteAI(_player);
-                    int dealt = Math.Max(0, beforeHealth - _player.CurrentHealth);
-                    _form.AppendNarrative(DescribeEnemyAttack(enemy, dealt));
-
-                    if (!_player.IsAlive)
-                    {
-                        break;
-                    }
-                }
-
-                TickSpecialCooldown();
-
-                if (!_player.IsAlive)
-                {
-                    ResolveEncounter();
-                    return;
-                }
-
-                if (!HasLivingEnemies())
-                {
-                    ResolveEncounter();
-                    return;
-                }
-
-                UpdateBattlefieldDisplay();
-                return;
+                turnSpent = ProcessSpecialChoice(choice, activeEnemy);
             }
-
-            if (_awaitingItemChoice)
+            else if (_awaitingItemChoice)
             {
-                if (!ProcessItemChoice(playerChoice, _player))
-                {
-                    return;
-                }
-
-                _awaitingItemChoice = false;
-
-                if (!HasLivingEnemies())
-                {
-                    ResolveEncounter();
-                    return;
-                }
-
-                if (_isFinalBossEncounter)
-                {
-                    ResolveFinalBossTurn(activeEnemy);
-                    return;
-                }
-
-                _form.AppendNarrative("");
-                foreach (Enemy enemy in _enemies.Where(enemy => enemy.IsAlive))
-                {
-                    _form.AppendNarrative($"[{enemy.Name}'s turn]");
-                    int beforeHealth = _player.CurrentHealth;
-                    enemy.ExecuteAI(_player);
-                    int dealt = Math.Max(0, beforeHealth - _player.CurrentHealth);
-                    _form.AppendNarrative(DescribeEnemyAttack(enemy, dealt));
-
-                    if (!_player.IsAlive)
-                    {
-                        break;
-                    }
-                }
-
-                TickSpecialCooldown();
-
-                if (!_player.IsAlive)
-                {
-                    ResolveEncounter();
-                    return;
-                }
-
-                if (!HasLivingEnemies())
-                {
-                    ResolveEncounter();
-                    return;
-                }
-
-                UpdateBattlefieldDisplay();
-                return;
+                turnSpent = ProcessItemChoice(choice);
             }
-
-            PlayerActionOutcome playerOutcome = ProcessPlayerAction(playerChoice, _player, activeEnemy);
-            if (_awaitingSpecialChoice)
+            else
             {
-                return;
+                PlayerActionOutcome outcome = ProcessPlayerAction(choice, activeEnemy);
+                if (outcome == PlayerActionOutcome.Fled)
+                {
+                    EndCombat();
+                    return;
+                }
+
+                turnSpent = outcome == PlayerActionOutcome.TurnSpent;
             }
 
-            if (playerOutcome == PlayerActionOutcome.NoTurnSpent)
+            if (turnSpent)
             {
-                return;
+                FinishRound(activeEnemy);
             }
+        }
 
-            if (playerOutcome == PlayerActionOutcome.Fled)
-            {
-                EndCombat();
-                return;
-            }
-
+        // After the player's action: the enemies answer, guard wears off, cooldowns tick.
+        private void FinishRound(Enemy activeEnemy)
+        {
             if (_isFinalBossEncounter)
             {
                 ResolveFinalBossTurn(activeEnemy);
@@ -270,15 +176,10 @@ namespace ARDO.Game.Combat
                 }
             }
 
+            _player.ClearGuard();
             TickSpecialCooldown();
 
-            if (!_player.IsAlive)
-            {
-                ResolveEncounter();
-                return;
-            }
-
-            if (!HasLivingEnemies())
+            if (!_player.IsAlive || !HasLivingEnemies())
             {
                 ResolveEncounter();
                 return;
@@ -289,7 +190,9 @@ namespace ARDO.Game.Combat
 
         private void UpdateBattlefieldDisplay()
         {
+            _form.SetCommandContext("Combat commands: 1 attack, 2 special, 3 flee, 4 item.");
             _form.UpdateVisualMetricsDisplay();
+            ShowActiveEnemy();
 
             _form.AppendNarrative("\n----------------------------------------------------------");
             if (_player is Mage mage)
@@ -311,7 +214,9 @@ namespace ARDO.Game.Combat
             _form.AppendNarrative("----------------------------------------------------------");
             _form.AppendNarrative("1. Basic Attack");
             _form.AppendNarrative("2. Execute Special Ability");
-            _form.AppendNarrative("3. Attempt to Flee (40% chance)");
+            _form.AppendNarrative(_isFinalBossEncounter
+                ? "3. Attempt to Flee (there is no escape here)"
+                : $"3. Attempt to Flee ({Hero.FleeChancePercent}% chance; a failed attempt costs your turn)");
             _form.AppendNarrative("4. Use Item");
             if (_specialCooldownTurnsRemaining > 0)
             {
@@ -325,18 +230,26 @@ namespace ARDO.Game.Combat
             }
         }
 
-        private PlayerActionOutcome ProcessPlayerAction(string choice, Hero player, Enemy enemy)
+        private PlayerActionOutcome ProcessPlayerAction(string choice, Enemy enemy)
         {
-            string normalizedChoice = choice.Trim().ToLowerInvariant();
-
-            switch (normalizedChoice)
+            switch (choice)
             {
+                case "1":
+                case "attack":
+                case "basic":
+                case "strike":
+                    int beforeHealth = enemy.CurrentHealth;
+                    _player.Attack(enemy);
+                    int damage = Math.Max(0, beforeHealth - enemy.CurrentHealth);
+                    _form.AppendNarrative(DescribePlayerBasicAttack(enemy, damage));
+                    return PlayerActionOutcome.TurnSpent;
+
                 case "2":
                 case "special":
                 case "ability":
                     if (_specialCooldownTurnsRemaining > 0)
                     {
-                _form.AppendNarrative("Your special ability is still recovering. Choose another action.");
+                        _form.AppendNarrative("Your special ability is still recovering. Choose another action.");
                         return PlayerActionOutcome.NoTurnSpent;
                     }
 
@@ -355,25 +268,24 @@ namespace ARDO.Game.Combat
                         return PlayerActionOutcome.NoTurnSpent;
                     }
 
-                    _form.AppendNarrative($"{player.Name} attempts to break away from combat and flee...");
-                    bool success = player.EscapeFromCombat();
-                    if (success)
+                    _form.AppendNarrative($"{_player.Name} attempts to break away from combat and flee...");
+                    if (_player.EscapeFromCombat())
                     {
                         _form.AppendNarrative("Success! You escape the enemy's clutches and retreat to the safety of Oakhaven.");
                         LastActionWasFleeSuccessful = true;
+                        return PlayerActionOutcome.Fled;
                     }
-                    else
-                    {
-                        _form.AppendNarrative("Failed! The enemy blocks your exit path, trapping you in the encounter!");
-                    }
-                    return success ? PlayerActionOutcome.Fled : PlayerActionOutcome.NoTurnSpent;
+
+                    // A failed escape costs the turn, so the enemies get to strike.
+                    _form.AppendNarrative("Failed! The enemy blocks your exit path, trapping you in the encounter!");
+                    return PlayerActionOutcome.TurnSpent;
 
                 case "4":
                 case "item":
                 case "use item":
                 case "potion":
                 case "consumable":
-                    _pendingConsumables = player.HeroInventory.GetItems().OfType<Consumable>().ToList();
+                    _pendingConsumables = _player.HeroInventory.GetItems().OfType<Consumable>().ToList();
                     if (_pendingConsumables.Count == 0)
                     {
                         _form.AppendNarrative("You search your pack, but there is no consumable to use.");
@@ -384,112 +296,114 @@ namespace ARDO.Game.Combat
                     ShowItemMenu();
                     return PlayerActionOutcome.NoTurnSpent;
 
-                case "1":
-                case "attack":
-                case "basic":
-                case "strike":
                 default:
-                    int beforeHealth = enemy.CurrentHealth;
-                    player.Attack(enemy);
-                    int damage = Math.Max(0, beforeHealth - enemy.CurrentHealth);
-                    _form.AppendNarrative(DescribePlayerBasicAttack(player, enemy, damage));
-                    return PlayerActionOutcome.ContinueTurn;
+                    _form.AppendNarrative("Unknown combat command. Type 1 attack, 2 special, 3 flee, or 4 item.");
+                    return PlayerActionOutcome.NoTurnSpent;
             }
         }
 
-        private bool ProcessSpecialChoice(string choice, Hero player, Enemy enemy)
+        // Returns true when a move was used (the turn is spent).
+        private bool ProcessSpecialChoice(string choice, Enemy enemy)
         {
-            string normalizedChoice = choice.Trim().ToLowerInvariant();
-            List<(string MoveName, string Type, string Description)> moves = player.GetCombatMoves();
-
-            if (normalizedChoice is "back" or "0" or "cancel")
+            if (choice is "back" or "0" or "cancel")
             {
-                _form.AppendNarrative("Choose a special move:");
-                ShowSpecialMenu();
+                _awaitingSpecialChoice = false;
+                _form.AppendNarrative("You hold back your special ability.");
                 UpdateBattlefieldDisplay();
                 return false;
             }
 
-            if (!int.TryParse(normalizedChoice, out int selection) || selection < 1 || selection > moves.Count)
+            List<(string MoveName, string Type, string Description)> moves = _player.GetCombatMoves();
+            if (!int.TryParse(choice, out int selection) || selection < 1 || selection > moves.Count)
             {
                 _form.AppendNarrative($"Invalid special choice. Type 1-{moves.Count} or 0 to cancel.");
                 ShowSpecialMenu();
                 return false;
             }
 
-            if (player is Mage mage)
+            if (_player is Mage mage && mage.CurrentMana < Mage.ManaCostFor(selection))
             {
-                switch (selection)
-                {
-                    case 1:
-                        _form.AppendNarrative(mage.CastFirebolt(enemy));
-                        _specialCooldownTurnsRemaining = 2;
-                        break;
-
-                    case 2:
-                        _form.AppendNarrative(mage.CastLightningCascade(enemy));
-                        _specialCooldownTurnsRemaining = 2;
-                        break;
-
-                    case 3:
-                        _form.AppendNarrative(mage.CastArcaneWard());
-                        break;
-                }
+                _form.AppendNarrative($"Not enough mana for {moves[selection - 1].MoveName}: it needs {Mage.ManaCostFor(selection)}, you have {mage.CurrentMana}.");
+                _form.AppendNarrative("Choose another move, or 0 to cancel.");
+                return false;
             }
-            else if (player is ARDO.Game.Players.Warrior warrior)
-            {
-                switch (selection)
-                {
-                    case 1:
-                        _form.AppendNarrative(warrior.SwordStrike(enemy));
-                        _specialCooldownTurnsRemaining = 2;
-                        break;
 
-                    case 2:
-                        _form.AppendNarrative(warrior.ShieldBash(enemy));
-                        _specialCooldownTurnsRemaining = 2;
-                        break;
+            _awaitingSpecialChoice = false;
 
-                    case 3:
-                        _form.AppendNarrative(warrior.DefensiveGuard());
-                        break;
-                }
-            }
-            else
+            switch (_player)
             {
-                _form.AppendNarrative("Your class has no special combat style defined.");
+                case Mage caster:
+                    switch (selection)
+                    {
+                        case 1:
+                            _form.AppendNarrative(caster.CastFirebolt(enemy));
+                            _specialCooldownTurnsRemaining = SpecialCooldownTurns;
+                            break;
+                        case 2:
+                            _form.AppendNarrative(caster.CastLightningCascade(enemy));
+                            _specialCooldownTurnsRemaining = SpecialCooldownTurns;
+                            break;
+                        case 3:
+                            _form.AppendNarrative(caster.CastArcaneWard());
+                            break;
+                    }
+                    break;
+
+                case Warrior warrior:
+                    switch (selection)
+                    {
+                        case 1:
+                            _form.AppendNarrative(warrior.SwordStrike(enemy));
+                            _specialCooldownTurnsRemaining = SpecialCooldownTurns;
+                            break;
+                        case 2:
+                            _form.AppendNarrative(warrior.ShieldBash(enemy));
+                            _specialCooldownTurnsRemaining = SpecialCooldownTurns;
+                            break;
+                        case 3:
+                            _form.AppendNarrative(warrior.DefensiveGuard());
+                            break;
+                    }
+                    break;
+
+                default:
+                    _form.AppendNarrative("Your class has no special combat style defined.");
+                    break;
             }
 
             return true;
         }
 
-        private bool ProcessItemChoice(string choice, Hero player)
+        // Returns true when an item was used (the turn is spent).
+        private bool ProcessItemChoice(string choice)
         {
-            string normalizedChoice = choice.Trim().ToLowerInvariant();
-
-            if (normalizedChoice is "back" or "0" or "cancel")
+            if (choice is "back" or "0" or "cancel")
             {
+                _awaitingItemChoice = false;
+                _pendingConsumables.Clear();
                 _form.AppendNarrative("You close the item pouch and keep fighting.");
-                ShowItemMenu();
+                UpdateBattlefieldDisplay();
                 return false;
             }
 
-            if (!int.TryParse(normalizedChoice, out int selection) || selection < 1 || selection > _pendingConsumables.Count)
+            if (!int.TryParse(choice, out int selection) || selection < 1 || selection > _pendingConsumables.Count)
             {
                 _form.AppendNarrative($"Invalid item choice. Type 1-{_pendingConsumables.Count} or 0 to cancel.");
                 ShowItemMenu();
                 return false;
             }
 
+            _awaitingItemChoice = false;
+
             Consumable consumable = _pendingConsumables[selection - 1];
             int healedAmount = Math.Max(1, consumable.HealAmount);
-            int beforeHealth = player.CurrentHealth;
-            player.CurrentHealth = Math.Min(player.MaxHealth, player.CurrentHealth + healedAmount);
-            int actualHealed = player.CurrentHealth - beforeHealth;
+            int beforeHealth = _player.CurrentHealth;
+            _player.CurrentHealth = Math.Min(_player.MaxHealth, _player.CurrentHealth + healedAmount);
+            int actualHealed = _player.CurrentHealth - beforeHealth;
 
-            player.HeroInventory.RemoveItem(consumable);
-            _playerRepo.RemoveInventoryItem(player.CharacterId, consumable.ItemId);
-            _form.AppendNarrative($"{player.Name} uses {consumable.Name} and recovers {actualHealed} HP.");
+            _player.HeroInventory.RemoveItem(consumable);
+            _playerRepo.RemoveInventoryItem(_player.CharacterId, consumable.ItemId);
+            _form.AppendNarrative($"{_player.Name} uses {consumable.Name} and recovers {actualHealed} HP.");
             _pendingConsumables.Clear();
             return true;
         }
@@ -512,31 +426,27 @@ namespace ARDO.Game.Combat
                     _form.AppendNarrative($"A surge of power raises you to level {_player.Level}.");
                 }
 
-                _playerRepo.SaveGameState(_player, _player.ActiveStoryNode);
+                _playerRepo.SaveGameState(_player);
             }
             else if (!_player.IsAlive)
             {
-                _form.AppendNarrative($"\nDefeat. You were struck down by {_enemies.FirstOrDefault(enemy => enemy.IsAlive)?.Name ?? "the enemy"}.");
+                _form.AppendNarrative($"\nDefeat. You were struck down by {GetActiveEnemy()?.Name ?? "the enemy"}.");
             }
 
             EndCombat();
         }
 
+        // The First King's fight is a scripted loss: two rounds of pressure, then the epilogue.
         private void ResolveFinalBossTurn(Enemy activeEnemy)
         {
             _finalBossRounds++;
-
-            if (_player.CurrentHealth <= 0)
-            {
-                _player.CurrentHealth = 1;
-            }
 
             if (activeEnemy.CurrentHealth <= 0)
             {
                 activeEnemy.CurrentHealth = 1;
             }
 
-            if (_finalBossRounds <= 2)
+            if (_finalBossRounds <= FinalBossScriptedRounds)
             {
                 _form.AppendNarrative("");
                 _form.AppendNarrative($"[Phase {_finalBossRounds}] The First King answers your strike with cold amusement.");
@@ -551,6 +461,7 @@ namespace ARDO.Game.Combat
                 }
 
                 _form.AppendNarrative($"The room shudders under a smaller, patient strike. You endure with {_player.CurrentHealth} HP remaining.");
+                _player.ClearGuard();
                 TickSpecialCooldown();
                 UpdateBattlefieldDisplay();
                 return;
@@ -561,10 +472,10 @@ namespace ARDO.Game.Combat
 
         private void PlayFinalBossEnding()
         {
-            if (_finalBossEndingPlayed)
+            if (FinalBossEndingPlayed)
                 return;
 
-            _finalBossEndingPlayed = true;
+            FinalBossEndingPlayed = true;
             _player.CurrentHealth = 0;
 
             _form.AppendNarrative("");
@@ -599,15 +510,14 @@ namespace ARDO.Game.Combat
             _form.AppendNarrative("                 |_|            |___/         |___/ ");
             _form.AppendNarrative("");
 
-            EndCombat("The epilogue is complete. Press any key to return to the start screen.");
+            EndCombat();
         }
 
-        private void EndCombat(string message = "Combat ended. Enter any input to continue your journey.")
+        private void EndCombat()
         {
             IsCombatActive = false;
+            _player.ClearGuard();
             _form.UpdateVisualMetricsDisplay();
-            _form.AppendNarrative("");
-            _form.AppendNarrative(message);
         }
 
         private void TickSpecialCooldown()
@@ -618,35 +528,35 @@ namespace ARDO.Game.Combat
             }
         }
 
+        // Shows the current target's art, and switches it when the previous target falls.
         private void ShowActiveEnemy()
         {
             Enemy? activeEnemy = GetActiveEnemy();
-            if (activeEnemy != null)
+            if (activeEnemy != null && !ReferenceEquals(activeEnemy, _shownEnemy))
             {
-                _form.ShowEnemy(activeEnemy.Name, GetEnemySpriteKey(activeEnemy));
+                _shownEnemy = activeEnemy;
+                _form.ShowEnemy(activeEnemy.Name, activeEnemy.ArtKey);
             }
         }
 
         private void ShowSpecialMenu()
         {
-            _form.SetCommandContext("Special commands: choose 1 to 3, or 0 to cancel.");
+            List<(string MoveName, string Type, string Description)> moves = _player.GetCombatMoves();
+            _form.SetCommandContext($"Special commands: choose 1 to {moves.Count}, or 0 to cancel.");
             _form.AppendNarrative("");
             _form.AppendNarrative("Choose a special move:");
 
-            List<(string MoveName, string Type, string Description)> moves = _player.GetCombatMoves();
             for (int i = 0; i < moves.Count; i++)
             {
-                var move = moves[i];
-                _form.AppendNarrative($"{i + 1}. {move.MoveName} - {move.Description}");
+                _form.AppendNarrative($"{i + 1}. {moves[i].MoveName} - {moves[i].Description}");
             }
 
             _form.AppendNarrative("0. cancel");
-            _form.AppendNarrative("Choose 1, 2, 3, or 0 to cancel:");
         }
 
         private void ShowItemMenu()
         {
-            _form.SetCommandContext("Item commands: choose 1 to " + _pendingConsumables.Count + ", or 0 to cancel.");
+            _form.SetCommandContext($"Item commands: choose 1 to {_pendingConsumables.Count}, or 0 to cancel.");
             _form.AppendNarrative("");
             _form.AppendNarrative("Choose a consumable item:");
 
@@ -657,36 +567,21 @@ namespace ARDO.Game.Combat
             }
 
             _form.AppendNarrative("0. cancel");
-            _form.AppendNarrative($"Choose 1-{_pendingConsumables.Count}, or 0 to cancel:");
         }
 
-        private static string DescribePlayerBasicAttack(Hero player, Enemy enemy, int damage)
+        private string DescribePlayerBasicAttack(Enemy enemy, int damage)
         {
-            if (player is Mage)
+            return _player switch
             {
-                return $"{player.Name} snaps a quick arcane burst toward {enemy.Name} for {damage} damage.";
-            }
-
-            if (player is ARDO.Game.Players.Warrior)
-            {
-                return $"{player.Name} cuts into {enemy.Name} with a sword strike for {damage} damage.";
-            }
-
-            return $"{player.Name} lands a basic attack on {enemy.Name} for {damage} damage.";
+                Mage => $"{_player.Name} snaps a quick arcane burst toward {enemy.Name} for {damage} damage.",
+                Warrior => $"{_player.Name} cuts into {enemy.Name} with a sword strike for {damage} damage.",
+                _ => $"{_player.Name} lands a basic attack on {enemy.Name} for {damage} damage."
+            };
         }
 
         private static string DescribeEnemyAttack(Enemy enemy, int dealtDamage)
         {
-            string attackLine = enemy.Name.ToLowerInvariant() switch
-            {
-                var name when name.Contains("goblin") => $"{enemy.Name} lunges with a jagged blade.",
-                var name when name.Contains("skeleton") || name.Contains("skeletal") => $"{enemy.Name} rattles forward with a bone-sharp strike.",
-                var name when name.Contains("fire imp") || name.Contains("fireimp") => $"{enemy.Name} hurls a burst of ember flame.",
-                var name when name.Contains("wraith") => $"{enemy.Name} lashes out with a cold phantom swipe.",
-                var name when name.Contains("hollow captain") => $"{enemy.Name} drives a brutal captain's cut toward you.",
-                var name when name.Contains("alhuezo") => $"{enemy.Name} lifts the room with a king's crushing blow.",
-                _ => $"{enemy.Name} attacks from the shadows."
-            };
+            string attackLine = $"{enemy.Name} {enemy.AttackLine}";
 
             if (dealtDamage <= 0)
             {
@@ -704,31 +599,6 @@ namespace ARDO.Game.Combat
         private Enemy? GetActiveEnemy()
         {
             return _enemies.FirstOrDefault(enemy => enemy.IsAlive);
-        }
-
-        private static string GetEnemySpriteKey(Enemy enemy)
-        {
-            string lowerName = enemy.Name.ToLowerInvariant();
-
-            if (lowerName.Contains("goblin"))
-                return "goblin";
-
-            if (lowerName.Contains("skeleton") || lowerName.Contains("skeletal"))
-                return "skeleton";
-
-            if (lowerName.Contains("fire imp") || lowerName.Contains("fireimp"))
-                return "FireImp";
-
-            if (lowerName.Contains("hollow captain"))
-                return "HollowCaptain";
-
-            if (lowerName.Contains("wraith"))
-                return "WraithHerald";
-
-            if (lowerName.Contains("alhuezo") || enemy is ARDO.Game.Enemies.Boss)
-                return "Alhuezo";
-
-            return "boss";
         }
     }
 }

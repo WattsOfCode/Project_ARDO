@@ -3,3 +3,6 @@ obj/
 ardo.db
 *.user
 *.suo
+
+# Built game: attach it to a GitHub release instead of committing it.
+publish/

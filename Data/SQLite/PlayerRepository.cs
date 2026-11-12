@@ -4,9 +4,9 @@
  * Project ARDO
  *
  * Class description:
- * `PlayerRepository.cs` is a concrete SQLite repository that creates, reads, 
-    updates, and deletes player profiles and game state. It uses constructors 
-    and public CRUD methods to manage character progression, inventory, 
+ * `PlayerRepository.cs` is a concrete SQLite repository that creates, reads,
+    updates, and deletes player profiles and game state. It uses constructors
+    and public CRUD methods to manage character progression, inventory,
     and story persistence.
  */
 using System;
@@ -32,32 +32,26 @@ namespace ARDO.Data.SQLite
 
         public int CreatePlayer(string name, string classType)
         {
-            int baseHp = classType == "Warrior" ? 150 : 90;
-            int baseMana = classType == "Mage" ? 100 : 0;
+            // The class constructors own the starting stats, so they are written in one place.
+            Hero hero = CreateHero(name, classType);
+            int mana = hero is Mage mage ? mage.MaxMana : 0;
 
             using var connection = _config.CreateConnection();
 
-            string insertQuery = @"
+            const string insertQuery = @"
                 INSERT INTO characters (name, class_type, level, experience, current_health, max_health, current_mana, max_mana, gold, active_story_node)
-                VALUES (@name, @classType, 1, 0, @baseHp, @baseHp, @baseMana, @baseMana, 100, 1);";
+                VALUES (@name, @classType, @level, 0, @hp, @hp, @mana, @mana, @gold, 1);
+                SELECT last_insert_rowid();";
 
-            using (var command = new SqliteCommand(insertQuery, connection))
-            {
-                command.Parameters.AddWithValue("@name", name);
-                command.Parameters.AddWithValue("@classType", classType);
-                command.Parameters.AddWithValue("@baseHp", baseHp);
-                command.Parameters.AddWithValue("@baseMana", baseMana);
-                command.ExecuteNonQuery();
-            }
+            using var command = new SqliteCommand(insertQuery, connection);
+            command.Parameters.AddWithValue("@name", hero.Name);
+            command.Parameters.AddWithValue("@classType", classType);
+            command.Parameters.AddWithValue("@level", hero.Level);
+            command.Parameters.AddWithValue("@hp", hero.MaxHealth);
+            command.Parameters.AddWithValue("@mana", mana);
+            command.Parameters.AddWithValue("@gold", hero.Gold);
 
-            string idQuery = "SELECT last_insert_rowid();";
-            object? result;
-
-            using (var command = new SqliteCommand(idQuery, connection))
-            {
-                result = command.ExecuteScalar();
-            }
-
+            object? result = command.ExecuteScalar();
             return result != null ? Convert.ToInt32(result) : 0;
         }
 
@@ -65,7 +59,7 @@ namespace ARDO.Data.SQLite
         {
             DataTable table = new DataTable();
             using var connection = _config.CreateConnection();
-            string query = @"
+            const string query = @"
                 SELECT c.character_id, c.name, c.class_type, c.level, c.gold, q.title as current_quest
                 FROM characters c
                 JOIN quest_templates q ON c.active_story_node = q.quest_id";
@@ -82,7 +76,7 @@ namespace ARDO.Data.SQLite
 
             using (var connection = _config.CreateConnection())
             {
-                string query = "SELECT * FROM characters WHERE character_id = @charId;";
+                const string query = "SELECT * FROM characters WHERE character_id = @charId;";
                 using var command = new SqliteCommand(query, connection);
                 command.Parameters.AddWithValue("@charId", characterId);
 
@@ -92,22 +86,14 @@ namespace ARDO.Data.SQLite
                     string name = reader["name"]?.ToString() ?? "Unknown Hero";
                     string classType = reader["class_type"]?.ToString() ?? "Warrior";
 
-                    int maxHp = Convert.ToInt32(reader["max_health"]);
-                    int currentHp = Convert.ToInt32(reader["current_health"]);
-
-                    hero = classType switch
-                    {
-                        "Warrior" => new Warrior(name),
-                        "Mage" => new Mage(name),
-                        _ => throw new InvalidDataException($"Unknown hero profile variant: {classType}")
-                    };
-
+                    hero = CreateHero(name, classType);
                     hero.CharacterId = Convert.ToInt32(reader["character_id"]);
                     hero.Level = Convert.ToInt32(reader["level"]);
                     hero.Experience = Convert.ToInt32(reader["experience"]);
-                    hero.MaxHealth = maxHp;
-                    hero.CurrentHealth = currentHp;
+                    hero.MaxHealth = Convert.ToInt32(reader["max_health"]);
+                    hero.CurrentHealth = Convert.ToInt32(reader["current_health"]);
                     hero.Gold = Convert.ToInt32(reader["gold"]);
+                    hero.ActiveStoryNode = Convert.ToInt32(reader["active_story_node"]);
 
                     if (hero is Mage mage)
                     {
@@ -125,12 +111,12 @@ namespace ARDO.Data.SQLite
             return hero;
         }
 
-        public void SaveGameState(Hero character, int activeStoryNode)
+        public void SaveGameState(Hero character)
         {
             using var connection = _config.CreateConnection();
-            string query = @"
-                UPDATE characters 
-                SET level = @level, experience = @xp, current_health = @currentHp, max_health = @maxHp, 
+            const string query = @"
+                UPDATE characters
+                SET level = @level, experience = @xp, current_health = @currentHp, max_health = @maxHp,
                     current_mana = @currentMana, max_mana = @maxMana, gold = @gold, active_story_node = @storyNode
                 WHERE character_id = @charId;";
 
@@ -142,7 +128,7 @@ namespace ARDO.Data.SQLite
             command.Parameters.AddWithValue("@currentMana", character is Mage m ? m.CurrentMana : 0);
             command.Parameters.AddWithValue("@maxMana", character is Mage mage ? mage.MaxMana : 0);
             command.Parameters.AddWithValue("@gold", character.Gold);
-            command.Parameters.AddWithValue("@storyNode", activeStoryNode);
+            command.Parameters.AddWithValue("@storyNode", character.ActiveStoryNode);
             command.Parameters.AddWithValue("@charId", character.CharacterId);
 
             command.ExecuteNonQuery();
@@ -151,7 +137,7 @@ namespace ARDO.Data.SQLite
         public void DeleteProfile(int characterId)
         {
             using var connection = _config.CreateConnection();
-            string query = "DELETE FROM characters WHERE character_id = @charId;";
+            const string query = "DELETE FROM characters WHERE character_id = @charId;";
             using var command = new SqliteCommand(query, connection);
             command.Parameters.AddWithValue("@charId", characterId);
             command.ExecuteNonQuery();
@@ -165,6 +151,21 @@ namespace ARDO.Data.SQLite
         public void RemoveInventoryItem(int characterId, int itemId)
         {
             _inventoryRepo.RemoveInventoryItem(characterId, itemId);
+        }
+
+        public void SaveEquipment(Hero character)
+        {
+            _inventoryRepo.SaveEquippedFlags(character);
+        }
+
+        private static Hero CreateHero(string name, string classType)
+        {
+            return classType switch
+            {
+                "Warrior" => new Warrior(name),
+                "Mage" => new Mage(name),
+                _ => throw new InvalidDataException($"Unknown hero profile variant: {classType}")
+            };
         }
     }
 }
