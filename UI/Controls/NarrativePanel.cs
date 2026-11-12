@@ -33,6 +33,9 @@ namespace ARDO.UI.Controls
         private readonly System.Windows.Forms.Timer _revealTimer = new() { Interval = RevealIntervalMs };
 
         private RichTextBox _narrativeBox = null!;
+
+        // True between a banner's opening and closing "===" rules; banner lines are centered.
+        private bool _inBanner;
         private Font _regularFont = null!;
         private Font _headerFont = null!;
 
@@ -119,6 +122,7 @@ namespace ARDO.UI.Controls
 
         public void ClearNarrative()
         {
+            _inBanner = false;
             _revealTimer.Stop();
             _pending.Clear();
             _narrativeBox.Clear();
@@ -155,8 +159,23 @@ namespace ARDO.UI.Controls
                 tone = GuessTone(text);
             }
 
+            // Title banners (a "===" rule, the title, a "===" rule) sit centered across the panel.
+            bool rule = text.StartsWith("===");
+            bool centered = rule || _inBanner;
+            if (rule)
+            {
+                _inBanner = !_inBanner;
+            }
+
+            if (centered)
+            {
+                text = text.Trim();
+                tone = MessageTone.Header;
+            }
+
             _narrativeBox.SelectionStart = _narrativeBox.TextLength;
             _narrativeBox.SelectionLength = 0;
+            _narrativeBox.SelectionAlignment = centered ? HorizontalAlignment.Center : HorizontalAlignment.Left;
             _narrativeBox.SelectionColor = ColorFor(tone);
             _narrativeBox.SelectionFont = tone == MessageTone.Header ? _headerFont : _regularFont;
             _narrativeBox.SelectedText = text + "\n";

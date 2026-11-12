@@ -63,18 +63,17 @@ namespace ARDO.Game
 
             if (isNewGame)
             {
-                Say("In the Beginning, the Progenitor ordained a sacred geometry: flesh was meant to rise from the dust,");
-                Say("knit itself over ancient stone, and age backward into a state of pure, unblemished light.");
-                Say("But He grew cruel. With a cosmic wrench, He inverted the wheel.");
+                // Whole paragraphs, so the panel wraps them at its own width.
+                Say("In the Beginning, the Progenitor ordained a sacred geometry: flesh was meant to rise from the dust, " +
+                    "knit itself over ancient stone, and age backward into a state of pure, unblemished light. " +
+                    "But He grew cruel. With a cosmic wrench, He inverted the wheel.");
                 Say("");
-                Say("What humanity celebrates as \"birth\" is actually the beginning of the end.");
-                Say("We are born soft and fragile, slowly rotting into the rigid skeletons of His design.");
-                Say("Our entire existence is a countdown in reverse.");
+                Say("What humanity celebrates as \"birth\" is actually the beginning of the end. " +
+                    "We are born soft and fragile, slowly rotting into the rigid skeletons of His design. " +
+                    "Our entire existence is a countdown in reverse.");
                 Say("");
-                Say("You wake in Oakhaven's inn with the taste of ash in your mouth.");
-                Say("The Inn Keeper says the first bell has already passed and the Maw below town has opened again.");
-                Say("You must descend into the primordial dark, butcher the guardians of the twisted timeline,");
-                Say("and challenge the God-King who turned our growth into a slow, living decay.");
+                Say("The Maw below Oakhaven has opened again. You must descend into the primordial dark, " +
+                    "butcher the guardians of the twisted timeline, and challenge the God-King who turned our growth into a slow, living decay.");
             }
             else
             {
@@ -82,7 +81,6 @@ namespace ARDO.Game
                 Say("The dungeon still waits below Oakhaven, and the final throne remains untouched.");
             }
 
-            Say("");
             EnterTown();
         }
 
@@ -110,17 +108,18 @@ namespace ARDO.Game
             {
                 Say($"Quest {_hero.ActiveStoryNode}: {quest.Title}", MessageTone.Gold);
                 Say(quest.NarrativeIntro);
-                Say("");
 
-                Say(quest.IsFinalNode
-                    ? "The final chamber lies beneath the town. The king waits there, beyond mercy."
-                    : "Another section of the dungeon has opened. Clear it, return, and press deeper.");
+                // The first floor's intro already says the way down is open.
+                if (quest.IsFinalNode)
+                    Say("The final chamber lies beneath the town. The king waits there, beyond mercy.");
+                else if (_hero.ActiveStoryNode > 1)
+                    Say("Another section of the dungeon has opened. Clear it, return, and press deeper.");
             }
 
             if (npc != null)
             {
-                Say($"[{npc.Value.Role}] {npc.Value.Name}: \"{npc.Value.Dialogue}\"", MessageTone.Dim);
                 Say("");
+                Say($"[{npc.Value.Role}] {npc.Value.Name}: \"{npc.Value.Dialogue}\"", MessageTone.Dim);
             }
 
             ShowTownMenu();
@@ -459,7 +458,7 @@ namespace ARDO.Game
             EnterTown();
         }
 
-        // The description and the reminder about the corner buttons only on arrival; after that, just the choices.
+        // The town description only on arrival; after that, just the choices.
         private void ShowTownMenu(bool arriving = true)
         {
             _ui.SetCommandContext("Town: 1 shop, 2 rest at inn (10g), 3 enter dungeon, 4 save, 5 main menu, i / g pack and gear.");
@@ -469,11 +468,7 @@ namespace ARDO.Game
                 Say("Oakhaven settles around you. The merchant waits nearby, the inn is warm, and the dungeon still looms below.");
             }
 
-            Say("1. Shop    2. Rest at the inn (10g)    3. Enter the dungeon    4. Save    5. Main menu", MessageTone.Dim);
-            if (arriving)
-            {
-                Say("Inventory and Gear are in the bottom-right corner, or type i / g.", MessageTone.Dim);
-            }
+            Say("1 Shop   2 Rest (10g)   3 Dungeon   4 Save   5 Main menu", MessageTone.Dim);
         }
 
         private void OpenTownShop()

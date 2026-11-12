@@ -134,6 +134,11 @@ namespace ARDO.UI.Controls
         // Off on the start menus, before a hero is loaded.
         public void SetActionsEnabled(bool enabled)
         {
+            if (!InFightMode)
+            {
+                _caption.Text = enabled ? PackCaption : "Make a hero to open these";
+            }
+
             foreach (TableLayoutPanel row in new[] { _packButtons, _fightButtons })
             {
                 foreach (Control control in row.Controls)

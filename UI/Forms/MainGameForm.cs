@@ -204,6 +204,7 @@ namespace ARDO.UI.Forms
         private void HandleCharacterSelected(Hero hero)
         {
             _activeHero = hero ?? throw new ArgumentNullException(nameof(hero));
+            RestoreNarrativePanel();
             _gameState = new GameStateManager(this, _activeHero, _playerRepo, _questRepo);
             _gameShell.Visible = true;
             _gameShell.BringToFront();
@@ -220,6 +221,10 @@ namespace ARDO.UI.Forms
         {
             _gameShell.Visible = true;
             _gameShell.BringToFront();
+            _characterPanel.UpdateCharacterName("ARDO");
+            _statsPanel.ShowPlaceholder(_launchMode == GameLaunchMode.LoadGame
+                ? "Pick a saved hero to see their stats."
+                : "Your hero's stats show here once they're made.");
 
             switch (_launchMode)
             {
