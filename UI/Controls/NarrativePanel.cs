@@ -25,7 +25,8 @@ namespace ARDO.UI.Controls
         private const double LineHeight = 1.2;
         private const int PointsAfterLine = 1;
 
-        private static readonly Color Background = Color.FromArgb(10, 11, 14);
+        // ARDO's original scheme: black background, light green story text, gold titles, sky-blue for the player.
+        private static readonly Color Background = Color.Black;
 
         private readonly Queue<(string Text, MessageTone Tone)> _pending = new();
         private readonly System.Windows.Forms.Timer _revealTimer = new() { Interval = RevealIntervalMs };
@@ -169,19 +170,19 @@ namespace ARDO.UI.Controls
         {
             return tone switch
             {
-                MessageTone.Dim => Color.FromArgb(124, 132, 126),
-                MessageTone.Header => Color.FromArgb(201, 170, 98),
-                MessageTone.Command => Color.FromArgb(110, 182, 222),
-                MessageTone.Damage => Color.FromArgb(232, 108, 98),
-                MessageTone.Heal => Color.FromArgb(122, 212, 142),
-                MessageTone.Gold => Color.FromArgb(242, 204, 96),
-                MessageTone.Warning => Color.FromArgb(240, 152, 72),
-                MessageTone.Common => Color.FromArgb(205, 205, 205),
-                MessageTone.Uncommon => Color.FromArgb(112, 214, 112),
-                MessageTone.Rare => Color.FromArgb(96, 164, 255),
-                MessageTone.Epic => Color.FromArgb(192, 124, 242),
-                MessageTone.Legendary => Color.FromArgb(255, 164, 64),
-                _ => Color.FromArgb(214, 222, 206)
+                MessageTone.Dim => Color.LightGray,
+                MessageTone.Header => Color.Gold,
+                MessageTone.Command => Color.LightSkyBlue,
+                MessageTone.Damage => Color.Salmon,
+                MessageTone.Heal => Color.SpringGreen,
+                MessageTone.Gold => Color.Gold,
+                MessageTone.Warning => Color.Orange,
+                MessageTone.Common => Color.WhiteSmoke,
+                MessageTone.Uncommon => Color.LimeGreen,
+                MessageTone.Rare => Color.CornflowerBlue,
+                MessageTone.Epic => Color.MediumOrchid,
+                MessageTone.Legendary => Color.DarkOrange,
+                _ => Color.LightGreen
             };
         }
 
