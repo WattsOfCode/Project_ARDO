@@ -25,7 +25,7 @@ using ARDO.Game.Players;
 
 namespace ARDO.UI.Controls
 {
-    public partial class ShopPanel : UserControl
+    public partial class ShopPanel : UserControl, IOverlayPanel
     {
         private sealed record ShopOffer(string DisplayName, int BuyPrice, Func<GameItem> CreateItem, string Description);
 
@@ -41,6 +41,8 @@ namespace ARDO.UI.Controls
         private Label _feedbackLabel = null!;
 
         public event EventHandler? CloseRequested;
+
+        public string CommandHint => "Shop commands: buy 1, sell 1, sell all, equip 1, unequip 1, exit.";
 
         public ShopPanel(Hero hero, IPlayerRepository playerRepo, Action? refreshStatus = null)
         {

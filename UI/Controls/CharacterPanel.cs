@@ -159,8 +159,9 @@ namespace ARDO.UI.Controls
                         new string('W', longestLength),
                         testFont);
 
-                if (textSize.Width <
-                    _asciiDisplay.ClientSize.Width - 20)
+                // Tall portraits have to fit the height too, now the stats panel sits below.
+                if (textSize.Width < _asciiDisplay.ClientSize.Width - 20 &&
+                    testFont.Height * lines.Length <= _asciiDisplay.ClientSize.Height)
                 {
                     break;
                 }

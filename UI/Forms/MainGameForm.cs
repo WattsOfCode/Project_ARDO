@@ -4,8 +4,9 @@
  * Project ARDO
  *
  * Class description:
- * `MainGameForm.cs` is a concrete WinForms host that coordinates the narrative, 
-    stats, input, character, and shop overlay panels. It uses a constructor and 
+ * `MainGameForm.cs` is a concrete WinForms host that coordinates the narrative,
+    stats, input, character and quick-action panels, plus the full-screen
+    overlays (shop, inventory, gear) that take over the story area. It uses a constructor and 
     public methods to manage composition and command routing, while CRUD is 
     delegated to repository classes.
  */
@@ -33,7 +34,8 @@ namespace ARDO.UI.Forms
         private Panel _gameShell = null!;
         private Panel _storyHost = null!;
         private NarrativePanel _narrativePanel = null!;
-        private ShopPanel? _shopPanel;
+        private Control? _overlay;
+        private QuickActionsPanel _quickActions = null!;
         private CharacterPanel _characterPanel = null!;
         private InputPanel _inputPanel = null!;
         private StatsPanel _statsPanel = null!;
@@ -72,18 +74,21 @@ namespace ARDO.UI.Forms
                 Visible = false
             };
 
+            // Story on the left over the command box; on the right the portrait,
+            // the hero's stats, and the inventory/gear buttons beside the command box.
             var mainLayout = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 2,
-                RowCount = 2
+                RowCount = 3
             };
 
             mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
             mainLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 360F));
 
-            mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 75F));
-            mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 320F));
+            mainLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 70F));
 
             _storyHost = new Panel
             {
@@ -95,14 +100,22 @@ namespace ARDO.UI.Forms
             _characterPanel = new CharacterPanel();
             _inputPanel = new InputPanel();
             _statsPanel = new StatsPanel();
+            _quickActions = new QuickActionsPanel();
 
             _inputPanel.CommandSubmitted += HandleCommand;
+            _quickActions.CommandChosen += command =>
+            {
+                HandleCommand(command);
+                FocusCommandInput();
+            };
 
             _storyHost.Controls.Add(_narrativePanel);
             mainLayout.Controls.Add(_storyHost, 0, 0);
+            mainLayout.SetRowSpan(_storyHost, 2);
             mainLayout.Controls.Add(_characterPanel, 1, 0);
-            mainLayout.Controls.Add(_inputPanel, 0, 1);
             mainLayout.Controls.Add(_statsPanel, 1, 1);
+            mainLayout.Controls.Add(_inputPanel, 0, 2);
+            mainLayout.Controls.Add(_quickActions, 1, 2);
 
             _gameShell.Controls.Add(mainLayout);
             Controls.Add(_gameShell);
@@ -115,9 +128,14 @@ namespace ARDO.UI.Forms
 
             string normalized = command.Trim();
 
-            if (_shopPanel != null)
+            // An open screen takes typed commands, except "inventory" and "gear",
+            // which switch straight to the other screen.
+            if (_overlay is IOverlayPanel overlay)
             {
-                _shopPanel.ProcessCommand(normalized);
+                if (_gameState != null && GameStateManager.IsPanelCommand(normalized))
+                    _gameState.ProcessCommand(normalized);
+                else
+                    overlay.ProcessCommand(normalized);
                 return;
             }
 
@@ -165,6 +183,7 @@ namespace ARDO.UI.Forms
             _gameShell.BringToFront();
 
             ShowPlayer(_activeHero);
+            _quickActions.SetActionsEnabled(true);
             _gameState.BeginCampaign(_launchMode == GameLaunchMode.NewGame);
             UpdateVisualMetricsDisplay();
             FocusCommandInput();
@@ -221,33 +240,38 @@ namespace ARDO.UI.Forms
             _inputPanel.SetContextMessage(message);
         }
 
-        public void ShowShopOverlay(ShopPanel shopPanel)
+        // Swaps the story for a full screen such as the shop. Opening another one replaces it.
+        public void ShowOverlay<T>(T panel) where T : Control, IOverlayPanel
         {
-            if (shopPanel == null)
-                throw new ArgumentNullException(nameof(shopPanel));
+            if (panel == null)
+                throw new ArgumentNullException(nameof(panel));
 
-            if (_shopPanel != null)
-            {
-                _storyHost.Controls.Remove(_shopPanel);
-                _shopPanel.Dispose();
-            }
+            RemoveOverlay();
 
-            _shopPanel = shopPanel;
+            _overlay = panel;
             _storyHost.Controls.Remove(_narrativePanel);
-            _storyHost.Controls.Add(_shopPanel);
-            _shopPanel.BringToFront();
-            SetCommandContext("Shop commands: buy 1, sell 1, sell all, exit.");
+            _storyHost.Controls.Add(panel);
+            panel.BringToFront();
+            SetCommandContext(panel.CommandHint);
             FocusCommandInput();
+        }
+
+        private void RemoveOverlay()
+        {
+            if (_overlay == null)
+                return;
+
+            _storyHost.Controls.Remove(_overlay);
+            _overlay.Dispose();
+            _overlay = null;
         }
 
         public void RestoreNarrativePanel()
         {
-            if (_shopPanel == null)
+            if (_overlay == null)
                 return;
 
-            _storyHost.Controls.Remove(_shopPanel);
-            _shopPanel.Dispose();
-            _shopPanel = null;
+            RemoveOverlay();
 
             if (!_storyHost.Controls.Contains(_narrativePanel))
             {
@@ -265,6 +289,7 @@ namespace ARDO.UI.Forms
             _activeHero = null;
             _gameState = null;
             _gameShell.Visible = false;
+            _quickActions.SetActionsEnabled(false);
             _statsPanel.ShowPlaceholder("No active hero loaded.");
             Close();
         }

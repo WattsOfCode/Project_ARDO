@@ -35,7 +35,7 @@ namespace ARDO.Game
         private readonly QuestRepository _questRepo;
         private readonly CombatEngine _combatEngine;
         private int _encountersRemainingInRun;
-        private bool _townShopOpen;
+        private IOverlayPanel? _openPanel;
         private DungeonEvent? _activeEvent;
         private bool _onSidePassage;
         private bool _inAmbush;
@@ -132,9 +132,34 @@ namespace ARDO.Game
             _combatEngine.StartEncounter(_hero, enemies);
         }
 
+        public static bool IsInventoryCommand(string command) =>
+            command is "inventory" or "inv" or "i" or "pack" or "bag";
+
+        public static bool IsGearCommand(string command) =>
+            command is "gear" or "g" or "equipment" or "equip";
+
+        public static bool IsPanelCommand(string command)
+        {
+            string normalized = command.Trim().ToLowerInvariant();
+            return IsInventoryCommand(normalized) || IsGearCommand(normalized);
+        }
+
         public void ProcessCommand(string command)
         {
             string normalized = command.Trim().ToLower();
+
+            // The pack and the gear screen can be opened from anywhere they make sense.
+            if (IsInventoryCommand(normalized))
+            {
+                OpenInventory();
+                return;
+            }
+
+            if (IsGearCommand(normalized))
+            {
+                OpenGear();
+                return;
+            }
 
             switch (CurrentState)
             {
@@ -169,9 +194,6 @@ namespace ARDO.Game
                 case "1":
                 case "buy":
                 case "shop":
-                case "gear":
-                case "equip":
-                case "inventory":
                     OpenTownShop();
                     return;
 
@@ -348,7 +370,15 @@ namespace ARDO.Game
                 Say($"{i + 1}. {dungeonEvent.Choices[i].Label}");
             }
 
-            _ui.SetCommandContext($"Choose 1 to {dungeonEvent.Choices.Count}.");
+            ShowEventPrompt();
+        }
+
+        private void ShowEventPrompt()
+        {
+            if (_activeEvent != null)
+            {
+                _ui.SetCommandContext($"Choose 1 to {_activeEvent.Choices.Count}.");
+            }
         }
 
         private void ProcessEventChoice(string command)
@@ -426,31 +456,92 @@ namespace ARDO.Game
 
         private void ShowTownMenu()
         {
-            _ui.SetCommandContext("Town commands: 1 shop and gear, 2 rest at inn (10g), 3 enter dungeon, 4 save game, 5 exit to main menu.");
+            _ui.SetCommandContext("Town commands: 1 shop, 2 rest at inn (10g), 3 enter dungeon, 4 save game, 5 exit to main menu.");
             Say("");
             Say("Oakhaven settles around you. The merchant waits nearby, the inn is warm, and the dungeon still looms below.");
-            Say("1. Shop and gear    2. Rest at the inn (10g)    3. Enter the dungeon    4. Save    5. Main menu", MessageTone.Dim);
+            Say("1. Shop    2. Rest at the inn (10g)    3. Enter the dungeon    4. Save    5. Main menu", MessageTone.Dim);
+            Say("Inventory and Gear are in the bottom-right corner, or type i / g.", MessageTone.Dim);
         }
 
         private void OpenTownShop()
         {
-            if (_townShopOpen)
+            if (_openPanel is ShopPanel)
                 return;
 
-            _townShopOpen = true;
-            var shopPanel = new ShopPanel(_hero, _playerRepo, _ui.UpdateVisualMetricsDisplay);
-            shopPanel.CloseRequested += (_, __) =>
-            {
-                _townShopOpen = false;
-                _ui.RestoreNarrativePanel();
-                _ui.UpdateVisualMetricsDisplay();
-                Say("");
-                Say("You return from the town shop and step back into Oakhaven.");
-                ShowTownMenu();
-                _ui.FocusCommandInput();
-            };
+            ShowPanel(new ShopPanel(_hero, _playerRepo, _ui.UpdateVisualMetricsDisplay));
+        }
 
-            _ui.ShowShopOverlay(shopPanel);
+        private void OpenInventory()
+        {
+            switch (CurrentState)
+            {
+                case GameState.Combat:
+                    // Mid-fight the pack is the potion pouch, and using one costs the turn.
+                    ProcessCombatCommand("item");
+                    return;
+
+                case GameState.Town:
+                case GameState.DungeonEvent:
+                    if (_openPanel is not InventoryPanel)
+                    {
+                        ShowPanel(new InventoryPanel(_hero, _playerRepo, _ui.UpdateVisualMetricsDisplay));
+                    }
+                    return;
+
+                default:
+                    Say("Your pack can wait.", MessageTone.Dim);
+                    return;
+            }
+        }
+
+        private void OpenGear()
+        {
+            switch (CurrentState)
+            {
+                case GameState.Combat:
+                    Say("There's no time to change gear mid-fight. Your potions are under Inventory.", MessageTone.Dim);
+                    return;
+
+                case GameState.Town:
+                case GameState.DungeonEvent:
+                    if (_openPanel is not GearPanel)
+                    {
+                        ShowPanel(new GearPanel(_hero, _playerRepo, _ui.UpdateVisualMetricsDisplay));
+                    }
+                    return;
+
+                default:
+                    Say("Your gear can wait.", MessageTone.Dim);
+                    return;
+            }
+        }
+
+        // Opening a screen while another is open replaces it.
+        private void ShowPanel<T>(T panel) where T : System.Windows.Forms.Control, IOverlayPanel
+        {
+            _openPanel = panel;
+            panel.CloseRequested += (_, __) => ClosePanel(panel);
+            _ui.ShowOverlay(panel);
+        }
+
+        private void ClosePanel(IOverlayPanel panel)
+        {
+            if (!ReferenceEquals(_openPanel, panel))
+                return;
+
+            _openPanel = null;
+            _ui.RestoreNarrativePanel();
+            _ui.UpdateVisualMetricsDisplay();
+            Say("");
+            Say(panel is ShopPanel
+                ? "You return from the town shop and step back into Oakhaven."
+                : "You close your pack and look up.");
+
+            if (CurrentState == GameState.Town)
+                ShowTownMenu();
+            else
+                ShowEventPrompt();
+
             _ui.FocusCommandInput();
         }
 

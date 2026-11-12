@@ -17,6 +17,7 @@ using ARDO.Core.Entities;
 using ARDO.Core.Enums;
 using ARDO.Data;
 using ARDO.Game.Enemies;
+using ARDO.Game.Inventory;
 using ARDO.Game.Players;
 using ARDO.UI.Display;
 using ARDO.UI.Forms;
@@ -383,7 +384,7 @@ namespace ARDO.Game.Combat
                 case "consumable":
                     _pendingConsumables = _player.HeroInventory.GetItems()
                         .OfType<Consumable>()
-                        .Where(item => !item.RestoresMana || _player is Mage)
+                        .Where(item => ConsumableUse.CanUse(_player, item))
                         .ToList();
 
                     if (_pendingConsumables.Count == 0)
@@ -513,17 +514,7 @@ namespace ARDO.Game.Combat
             _awaitingItemChoice = false;
 
             Consumable consumable = _pendingConsumables[selection - 1];
-            if (consumable.RestoresMana && _player is Mage mage)
-            {
-                int before = mage.CurrentMana;
-                mage.CurrentMana = Math.Min(mage.MaxMana, mage.CurrentMana + consumable.StatModifier);
-                Say($"{_player.Name} drinks {consumable.Name} and recovers {mage.CurrentMana - before} mana.", MessageTone.Heal);
-            }
-            else
-            {
-                int healed = _player.Heal(Math.Max(1, consumable.HealAmount));
-                Say($"{_player.Name} uses {consumable.Name} and recovers {healed} HP.", MessageTone.Heal);
-            }
+            Say(ConsumableUse.Apply(_player, consumable), MessageTone.Heal);
 
             _player.HeroInventory.RemoveItem(consumable);
             _playerRepo.RemoveInventoryItem(_player.CharacterId, consumable.ItemId);

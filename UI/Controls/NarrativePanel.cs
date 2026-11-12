@@ -166,7 +166,7 @@ namespace ARDO.UI.Controls
             return MessageTone.Normal;
         }
 
-        private static Color ColorFor(MessageTone tone)
+        internal static Color ColorFor(MessageTone tone)
         {
             return tone switch
             {
