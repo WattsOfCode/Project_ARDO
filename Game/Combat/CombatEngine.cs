@@ -41,6 +41,8 @@ namespace ARDO.Game.Combat
         private List<Consumable> _pendingConsumables = new();
         private Enemy? _shownEnemy;
         private int _targetIndex;
+        private int _round;
+        private bool _movesListed;
 
         private enum PlayerActionOutcome
         {
@@ -92,6 +94,8 @@ namespace ARDO.Game.Combat
             _pendingConsumables.Clear();
             _shownEnemy = null;
             _targetIndex = 0;
+            _round = 1;
+            _movesListed = false;
             LastActionWasFleeSuccessful = false;
             LastGoldEarned = 0;
             GuardiansDefeated = 0;
@@ -138,6 +142,14 @@ namespace ARDO.Game.Combat
 
             string choice = (playerChoice ?? string.Empty).Trim().ToLowerInvariant();
             bool turnSpent;
+
+            // A button or a typed word like "attack" while a menu is open drops the menu and does that instead.
+            if ((_awaitingSpecialChoice || _awaitingItemChoice) && IsTopLevelWord(choice))
+            {
+                _awaitingSpecialChoice = false;
+                _awaitingItemChoice = false;
+                _pendingConsumables.Clear();
+            }
 
             if (_awaitingSpecialChoice)
             {
@@ -207,6 +219,7 @@ namespace ARDO.Game.Combat
             TickBurns();
             WriteAnnouncements();
             TickSpecialCooldown();
+            _round++;
 
             if (!_player.IsAlive || !HasLivingEnemies())
             {
@@ -247,14 +260,37 @@ namespace ARDO.Game.Combat
             }
         }
 
+        // The command line under the story, kept current with the flee chance and the cooldown.
+        private string CombatHint()
+        {
+            string special = _specialCooldownTurnsRemaining > 0 ? $"2 special (ready in {_specialCooldownTurnsRemaining})" : "2 special";
+            string flee = _isFinalBossEncounter ? "no fleeing" : $"3 flee ({_player.FleeChancePercent}%)";
+            string target = _enemies.Count(enemy => enemy.IsAlive) > 1 ? ", target N" : string.Empty;
+            return $"Round {_round}: 1 attack, {special}, {flee}, 4 item{target}.";
+        }
+
+        private static bool IsTopLevelWord(string choice) =>
+            choice is "attack" or "basic" or "strike" or "special" or "ability" or "flee" or "run" or "retreat"
+                or "escape" or "item" or "use" or "potion" or "consumable";
+
+        // Closes the special or item menu, if one is open. Returns false when neither was.
+        public bool CancelMenu()
+        {
+            if (!IsCombatActive || (!_awaitingSpecialChoice && !_awaitingItemChoice))
+                return false;
+
+            ExecuteTurn("0");
+            return true;
+        }
+
         private void UpdateBattlefieldDisplay()
         {
-            _form.SetCommandContext("Combat: 1 attack, 2 special, 3 flee, 4 item, target N to switch target.");
+            _form.SetCommandContext(CombatHint());
             _form.UpdateVisualMetricsDisplay();
             ShowActiveEnemy();
 
             Say("");
-            Say("----------------------------------------------------------", MessageTone.Header);
+            Say($"--- Round {_round} " + new string('-', 48), MessageTone.Header);
             string hpBar = TextBar.Render(_player.CurrentHealth, _player.MaxHealth);
             Say(_player is Mage mage
                 ? $"{_player.Name}  HP {hpBar} {_player.CurrentHealth}/{_player.MaxHealth}  Mana {mage.CurrentMana}/{mage.MaxMana}"
@@ -295,6 +331,11 @@ namespace ARDO.Game.Combat
             }
 
             Say("----------------------------------------------------------", MessageTone.Header);
+            if (_movesListed)
+                return;
+
+            // The full list once per fight; after that the buttons and the hint line carry it.
+            _movesListed = true;
             Say("1. Basic Attack        2. Special Ability");
             Say(_isFinalBossEncounter
                 ? "3. Flee (no escape)    4. Use Item"
@@ -302,11 +343,6 @@ namespace ARDO.Game.Combat
             if (_enemies.Count(enemy => enemy.IsAlive) > 1)
             {
                 Say("Type 'target 2' to switch targets, or 'attack 2' to hit enemy 2.", MessageTone.Dim);
-            }
-
-            if (_specialCooldownTurnsRemaining > 0)
-            {
-                Say($"Special ability cooldown: {_specialCooldownTurnsRemaining} turn(s)", MessageTone.Dim);
             }
 
             if (_isFinalBossEncounter)
@@ -434,7 +470,7 @@ namespace ARDO.Game.Combat
             {
                 _awaitingSpecialChoice = false;
                 Say("You hold back your special ability.", MessageTone.Dim);
-                UpdateBattlefieldDisplay();
+                _form.SetCommandContext(CombatHint());
                 return false;
             }
 
@@ -506,7 +542,7 @@ namespace ARDO.Game.Combat
                 _awaitingItemChoice = false;
                 _pendingConsumables.Clear();
                 Say("You close the item pouch and keep fighting.", MessageTone.Dim);
-                UpdateBattlefieldDisplay();
+                _form.SetCommandContext(CombatHint());
                 return false;
             }
 
@@ -586,6 +622,7 @@ namespace ARDO.Game.Combat
                 Say($"The room shudders under a smaller, patient strike. You endure with {_player.CurrentHealth} HP remaining.", MessageTone.Damage);
                 _player.ClearGuard();
                 TickSpecialCooldown();
+                _round++;
                 UpdateBattlefieldDisplay();
                 return;
             }
@@ -665,7 +702,7 @@ namespace ARDO.Game.Combat
         private void ShowSpecialMenu()
         {
             List<(string MoveName, string Type, string Description)> moves = _player.GetCombatMoves();
-            _form.SetCommandContext($"Special: choose 1 to {moves.Count} (add a number to pick a target, like '1 2'), or 0 to cancel.");
+            _form.SetCommandContext($"Special: choose 1 to {moves.Count} (add a target, like '1 2'), or 0 / Esc to cancel.");
             Say("");
             Say("Choose a special move:", MessageTone.Header);
 
@@ -679,7 +716,7 @@ namespace ARDO.Game.Combat
 
         private void ShowItemMenu()
         {
-            _form.SetCommandContext($"Items: choose 1 to {_pendingConsumables.Count}, or 0 to cancel.");
+            _form.SetCommandContext($"Items: choose 1 to {_pendingConsumables.Count}, or 0 / Esc to cancel.");
             Say("");
             Say("Choose an item:", MessageTone.Header);
 

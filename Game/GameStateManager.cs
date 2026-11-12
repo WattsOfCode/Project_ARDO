@@ -132,6 +132,12 @@ namespace ARDO.Game
             _combatEngine.StartEncounter(_hero, enemies);
         }
 
+        // True while a fight is on screen, so the window can show the fight buttons.
+        public bool InCombat => CurrentState == GameState.Combat && _combatEngine.IsCombatActive;
+
+        // Esc in a fight closes the special or item menu. Returns false when there was nothing to close.
+        public bool CancelMenu() => InCombat && _combatEngine.CancelMenu();
+
         public static bool IsInventoryCommand(string command) =>
             command is "inventory" or "inv" or "i" or "pack" or "bag";
 
@@ -212,7 +218,7 @@ namespace ARDO.Game
                 case "4":
                 case "save":
                     _playerRepo.SaveGameState(_hero);
-                    Say("[SYSTEM] Game state saved to SQLite.", MessageTone.Dim);
+                    Say("Game saved.", MessageTone.Dim);
                     Say("");
                     return;
 
@@ -232,8 +238,7 @@ namespace ARDO.Game
 
             if (CurrentState == GameState.Town && showTownMenu)
             {
-                Say("");
-                ShowTownMenu();
+                ShowTownMenu(arriving: false);
             }
         }
 
@@ -454,13 +459,21 @@ namespace ARDO.Game
             EnterTown();
         }
 
-        private void ShowTownMenu()
+        // The description and the reminder about the corner buttons only on arrival; after that, just the choices.
+        private void ShowTownMenu(bool arriving = true)
         {
-            _ui.SetCommandContext("Town commands: 1 shop, 2 rest at inn (10g), 3 enter dungeon, 4 save game, 5 exit to main menu.");
+            _ui.SetCommandContext("Town: 1 shop, 2 rest at inn (10g), 3 enter dungeon, 4 save, 5 main menu, i / g pack and gear.");
             Say("");
-            Say("Oakhaven settles around you. The merchant waits nearby, the inn is warm, and the dungeon still looms below.");
+            if (arriving)
+            {
+                Say("Oakhaven settles around you. The merchant waits nearby, the inn is warm, and the dungeon still looms below.");
+            }
+
             Say("1. Shop    2. Rest at the inn (10g)    3. Enter the dungeon    4. Save    5. Main menu", MessageTone.Dim);
-            Say("Inventory and Gear are in the bottom-right corner, or type i / g.", MessageTone.Dim);
+            if (arriving)
+            {
+                Say("Inventory and Gear are in the bottom-right corner, or type i / g.", MessageTone.Dim);
+            }
         }
 
         private void OpenTownShop()
@@ -538,7 +551,7 @@ namespace ARDO.Game
                 : "You close your pack and look up.");
 
             if (CurrentState == GameState.Town)
-                ShowTownMenu();
+                ShowTownMenu(arriving: false);
             else
                 ShowEventPrompt();
 

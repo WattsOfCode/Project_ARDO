@@ -103,6 +103,8 @@ namespace ARDO.UI.Forms
             _quickActions = new QuickActionsPanel();
 
             _inputPanel.CommandSubmitted += HandleCommand;
+            _inputPanel.CancelPressed += HandleCancel;
+            _inputPanel.ScrollRequested += direction => _narrativePanel.ScrollPage(direction);
             _quickActions.CommandChosen += command =>
             {
                 HandleCommand(command);
@@ -136,6 +138,7 @@ namespace ARDO.UI.Forms
                     _gameState.ProcessCommand(normalized);
                 else
                     overlay.ProcessCommand(normalized);
+                RefreshQuickActions();
                 return;
             }
 
@@ -157,6 +160,29 @@ namespace ARDO.UI.Forms
             }
 
             _gameState.ProcessCommand(normalized);
+            RefreshQuickActions();
+        }
+
+        // Esc closes an open screen, or the special or item menu in a fight.
+        private void HandleCancel()
+        {
+            if (_overlay is IOverlayPanel overlay)
+            {
+                overlay.ProcessCommand("exit");
+                return;
+            }
+
+            if (_gameState == null)
+                return;
+
+            _narrativePanel.FlushPending();
+            _gameState.CancelMenu();
+        }
+
+        // The corner buttons follow the game: fight buttons in a fight, pack and gear otherwise.
+        private void RefreshQuickActions()
+        {
+            _quickActions.SetFightMode(_gameState?.InCombat == true);
         }
 
         internal void ClearNarrative()
@@ -185,6 +211,7 @@ namespace ARDO.UI.Forms
             ShowPlayer(_activeHero);
             _quickActions.SetActionsEnabled(true);
             _gameState.BeginCampaign(_launchMode == GameLaunchMode.NewGame);
+            RefreshQuickActions();
             UpdateVisualMetricsDisplay();
             FocusCommandInput();
         }
@@ -290,6 +317,7 @@ namespace ARDO.UI.Forms
             _gameState = null;
             _gameShell.Visible = false;
             _quickActions.SetActionsEnabled(false);
+            _quickActions.SetFightMode(false);
             _statsPanel.ShowPlaceholder("No active hero loaded.");
             Close();
         }

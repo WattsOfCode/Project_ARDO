@@ -9,6 +9,7 @@
     and event handlers.
  */
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 using ARDO.UI.Display;
@@ -21,7 +22,18 @@ namespace ARDO.UI.Controls
         private TextBox _commandInput = null!;
         private Button _submitButton = null!;
 
+        // Earlier commands, newest last, for the Up and Down keys.
+        private const int HistoryLimit = 40;
+        private readonly List<string> _history = new();
+        private int _historyIndex;
+
         public event Action<string>? CommandSubmitted;
+
+        // Esc in the command box: close a screen or cancel a menu.
+        public event Action? CancelPressed;
+
+        // PageUp / PageDown in the command box scroll the story: -1 up, 1 down.
+        public event Action<int>? ScrollRequested;
 
         public InputPanel()
         {
@@ -110,12 +122,62 @@ namespace ARDO.UI.Controls
 
         private void HandleEnterKey(object? sender, KeyEventArgs e)
         {
-            if (e.KeyCode == Keys.Enter)
+            switch (e.KeyCode)
             {
-                e.SuppressKeyPress = true;
+                case Keys.Enter:
+                    e.SuppressKeyPress = true;
+                    SubmitCommand(sender, EventArgs.Empty);
+                    break;
 
-                SubmitCommand(sender, EventArgs.Empty);
+                case Keys.Escape:
+                    e.SuppressKeyPress = true;
+                    CancelPressed?.Invoke();
+                    break;
+
+                case Keys.Up:
+                    e.Handled = true;
+                    StepHistory(-1);
+                    break;
+
+                case Keys.Down:
+                    e.Handled = true;
+                    StepHistory(1);
+                    break;
+
+                case Keys.PageUp:
+                    e.Handled = true;
+                    ScrollRequested?.Invoke(-1);
+                    break;
+
+                case Keys.PageDown:
+                    e.Handled = true;
+                    ScrollRequested?.Invoke(1);
+                    break;
             }
+        }
+
+        private void StepHistory(int step)
+        {
+            if (_history.Count == 0)
+                return;
+
+            _historyIndex = Math.Clamp(_historyIndex + step, 0, _history.Count);
+            _commandInput.Text = _historyIndex < _history.Count ? _history[_historyIndex] : string.Empty;
+            _commandInput.SelectionStart = _commandInput.TextLength;
+        }
+
+        private void Remember(string command)
+        {
+            if (_history.Count == 0 || _history[^1] != command)
+            {
+                _history.Add(command);
+                if (_history.Count > HistoryLimit)
+                {
+                    _history.RemoveAt(0);
+                }
+            }
+
+            _historyIndex = _history.Count;
         }
 
         private void SubmitCommand(object? sender, EventArgs e)
@@ -126,6 +188,7 @@ namespace ARDO.UI.Controls
                 return;
 
             _commandInput.Clear();
+            Remember(command);
             CommandSubmitted?.Invoke(command);
         }
 

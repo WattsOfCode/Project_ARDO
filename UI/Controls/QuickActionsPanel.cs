@@ -5,8 +5,9 @@
  *
  * Class description:
  * `QuickActionsPanel.cs` sits in the bottom-right corner beside the command box.
-    Its Inventory and Gear buttons send the same commands the player could type,
-    so they work wherever those commands do.
+    Outside a fight it holds the Inventory and Gear buttons; during a fight it
+    switches to Attack, Special, Flee and Item. Every button sends the same
+    command the player could type, so it works wherever that command does.
  */
 using System;
 using System.Drawing;
@@ -17,11 +18,17 @@ namespace ARDO.UI.Controls
 {
     public class QuickActionsPanel : UserControl
     {
-        private Button _inventoryButton = null!;
-        private Button _gearButton = null!;
+        private const string PackCaption = "Pack and gear (or type i / g)";
+        private const string FightCaption = "Fight (or type 1 - 4)";
 
-        // Raised with the command text, e.g. "inventory".
+        private Label _caption = null!;
+        private TableLayoutPanel _packButtons = null!;
+        private TableLayoutPanel _fightButtons = null!;
+
+        // Raised with the command text, e.g. "inventory" or "attack".
         public event Action<string>? CommandChosen;
+
+        public bool InFightMode { get; private set; }
 
         public QuickActionsPanel()
         {
@@ -37,20 +44,18 @@ namespace ARDO.UI.Controls
             var layout = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                ColumnCount = 2,
+                ColumnCount = 1,
                 RowCount = 2,
                 BackColor = Color.Black
             };
 
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 22F));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
 
-            var caption = new Label
+            _caption = new Label
             {
                 Dock = DockStyle.Fill,
-                Text = "Pack and gear (or type i / g)",
+                Text = PackCaption,
                 ForeColor = Color.LightGray,
                 BackColor = Color.Black,
                 Font = UiFonts.Mono(9.5f),
@@ -58,25 +63,50 @@ namespace ARDO.UI.Controls
                 Margin = new Padding(0)
             };
 
-            _inventoryButton = MakeButton("Inventory", "inventory");
-            _gearButton = MakeButton("Gear", "gear");
+            _packButtons = ButtonRow(10f, ("Inventory", "inventory"), ("Gear", "gear"));
+            _fightButtons = ButtonRow(9f, ("Attack", "attack"), ("Special", "special"), ("Flee", "flee"), ("Item", "item"));
+            _fightButtons.Visible = false;
 
-            layout.SetColumnSpan(caption, 2);
-            layout.Controls.Add(caption, 0, 0);
-            layout.Controls.Add(_inventoryButton, 0, 1);
-            layout.Controls.Add(_gearButton, 1, 1);
+            // Both rows share one cell; only one is visible at a time.
+            var buttonHost = new Panel { Dock = DockStyle.Fill, Margin = new Padding(0), BackColor = Color.Black };
+            buttonHost.Controls.Add(_packButtons);
+            buttonHost.Controls.Add(_fightButtons);
+
+            layout.Controls.Add(_caption, 0, 0);
+            layout.Controls.Add(buttonHost, 0, 1);
 
             Controls.Add(layout);
             SetActionsEnabled(false);
         }
 
-        private Button MakeButton(string text, string command)
+        // Four buttons share the width that two have outside a fight, so they use a smaller font.
+        private TableLayoutPanel ButtonRow(float fontSize, params (string Text, string Command)[] buttons)
+        {
+            var row = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = buttons.Length,
+                RowCount = 1,
+                Margin = new Padding(0),
+                BackColor = Color.Black
+            };
+
+            foreach ((string text, string command) in buttons)
+            {
+                row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F / buttons.Length));
+                row.Controls.Add(MakeButton(text, command, fontSize));
+            }
+
+            return row;
+        }
+
+        private Button MakeButton(string text, string command, float fontSize)
         {
             var button = new Button
             {
                 Text = text,
                 Dock = DockStyle.Fill,
-                Font = UiFonts.Mono(10f),
+                Font = UiFonts.Mono(fontSize),
                 BackColor = Color.Black,
                 ForeColor = Color.LightGreen,
                 FlatStyle = FlatStyle.Flat,
@@ -89,13 +119,29 @@ namespace ARDO.UI.Controls
             return button;
         }
 
+        // Swaps between the pack buttons and the fight buttons.
+        public void SetFightMode(bool fighting)
+        {
+            if (fighting == InFightMode)
+                return;
+
+            InFightMode = fighting;
+            _packButtons.Visible = !fighting;
+            _fightButtons.Visible = fighting;
+            _caption.Text = fighting ? FightCaption : PackCaption;
+        }
+
         // Off on the start menus, before a hero is loaded.
         public void SetActionsEnabled(bool enabled)
         {
-            _inventoryButton.Enabled = enabled;
-            _gearButton.Enabled = enabled;
-            _inventoryButton.ForeColor = enabled ? Color.LightGreen : Color.DimGray;
-            _gearButton.ForeColor = enabled ? Color.LightGreen : Color.DimGray;
+            foreach (TableLayoutPanel row in new[] { _packButtons, _fightButtons })
+            {
+                foreach (Control control in row.Controls)
+                {
+                    control.Enabled = enabled;
+                    control.ForeColor = enabled ? Color.LightGreen : Color.DimGray;
+                }
+            }
         }
     }
 }

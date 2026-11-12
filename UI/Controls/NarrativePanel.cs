@@ -11,6 +11,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using ARDO.Core.Enums;
 using ARDO.Interop;
@@ -105,6 +106,16 @@ namespace ARDO.UI.Controls
                 WriteLine(text, tone);
             }
         }
+
+        // One page up (-1) or down (1), for PageUp / PageDown in the command box.
+        public void ScrollPage(int direction)
+        {
+            const int WM_VSCROLL = 0x0115, SB_PAGEUP = 2, SB_PAGEDOWN = 3;
+            SendMessage(_narrativeBox.Handle, WM_VSCROLL, (IntPtr)(direction < 0 ? SB_PAGEUP : SB_PAGEDOWN), IntPtr.Zero);
+        }
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
 
         public void ClearNarrative()
         {
