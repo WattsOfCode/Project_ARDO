@@ -21,7 +21,8 @@ namespace ARDO.Core.Entities
             RarityType rarity,
             int value,
             int defenseBonus,
-            EquipmentSlot slot)
+            EquipmentSlot slot,
+            ItemEffect effect = ItemEffect.None)
 
             : base(
                 name,
@@ -35,6 +36,11 @@ namespace ARDO.Core.Entities
             DefenseBonus = defenseBonus;
             Slot = slot;
             StatModifier = defenseBonus;
+            Effect = effect;
         }
+
+        public override string Summary => Effect == ItemEffect.None
+            ? $"+{DefenseBonus} DEF"
+            : $"+{DefenseBonus} DEF, {EffectText}";
     }
 }

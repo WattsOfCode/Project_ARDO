@@ -9,6 +9,7 @@
  */
 namespace ARDO.Game.Enemies
 {
+    // The Hollow Captain winds up heavy blows often, and they land hard. Guard against them.
     public class HollowCaptain : Boss
     {
         public HollowCaptain() : base("Hollow Captain", 120, 20)
@@ -18,5 +19,13 @@ namespace ARDO.Game.Enemies
         public override string ArtKey => "HollowCaptain";
 
         public override string AttackLine => "drives a brutal captain's cut toward you.";
+
+        public override string HeavyAttackLine => "brings his greatblade down in a cleaving arc.";
+
+        public override string WindUpWarning => $"{Name} lifts his greatblade high overhead!";
+
+        protected override int HeavyChancePercent => 35;
+
+        protected override double HeavyMultiplier => 2.2;
     }
 }

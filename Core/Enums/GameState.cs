@@ -13,9 +13,8 @@ namespace ARDO.Core.Enums
         MainMenu,
         Town,
         Combat,
+        DungeonEvent,
         DefeatPrompt,
-        Dialogue,
-        Inventory,
         GameOver
     }
 }

@@ -11,7 +11,7 @@
 using System;
 using System.Collections.Generic;
 using ARDO.Core.Abstracts;
-using ARDO.Core.Interfaces;
+using ARDO.Core.Entities;
 
 namespace ARDO.Game.Players
 {
@@ -46,8 +46,8 @@ namespace ARDO.Game.Players
             return new List<(string, string, string)>
             {
                 ("Firebolt", "Attack", $"Launch a blazing projectile. Deals {FireboltDamage} magic dmg. (Cost: {FireboltCost} Mana)"),
-                ("Lightning Cascade", "Attack", $"Shock the target. Deals {LightningMinRoll + LightningBonus} to {LightningMaxRoll + LightningBonus} dmg. (Cost: {LightningCascadeCost} Mana)"),
-                ("Arcane Ward", "Defense", $"Raise a shield that blunts the enemies' next attacks. (Cost: {ArcaneWardCost} Mana)")
+                ("Lightning Cascade", "Attack", $"Shock the target for {LightningMinRoll + LightningBonus} to {LightningMaxRoll + LightningBonus} dmg; arcs to the others for half. (Cost: {LightningCascadeCost} Mana)"),
+                ("Arcane Ward", "Defense", $"Raise a shield: +3 defense and the next hit is halved. (Cost: {ArcaneWardCost} Mana)")
             };
         }
 
@@ -76,7 +76,7 @@ namespace ARDO.Game.Players
             CurrentMana = MaxMana;
         }
 
-        public string CastFirebolt(ICombatant target)
+        public string CastFirebolt(Enemy target)
         {
             if (CurrentMana < FireboltCost)
             {
@@ -84,12 +84,14 @@ namespace ARDO.Game.Players
             }
 
             CurrentMana -= FireboltCost;
-            int damage = FireboltDamage;
-            target.TakeDamage(damage);
-            return $"{Name} hurls Firebolt for {damage} damage. Mana {CurrentMana}/{MaxMana}.";
+            HitResult hit = Strike(target, FireboltDamage, canMiss: false);
+            return Narrate(hit,
+                $"{Name} hurls Firebolt at {target.Name} for {hit.Damage} damage. Mana {CurrentMana}/{MaxMana}.",
+                string.Empty);
         }
 
-        public string CastLightningCascade(ICombatant target)
+        // Hits the target, then arcs to every other standing enemy for half damage.
+        public string CastLightningCascade(Enemy target, IEnumerable<Enemy> otherEnemies)
         {
             if (CurrentMana < LightningCascadeCost)
             {
@@ -97,9 +99,27 @@ namespace ARDO.Game.Players
             }
 
             CurrentMana -= LightningCascadeCost;
-            int damage = Random.Shared.Next(LightningMinRoll, LightningMaxRoll + 1) + LightningBonus;
-            target.TakeDamage(damage);
-            return $"{Name} unleashes Lightning Cascade for {damage} damage. Mana {CurrentMana}/{MaxMana}.";
+            int roll = Random.Shared.Next(LightningMinRoll, LightningMaxRoll + 1) + LightningBonus;
+            HitResult hit = Strike(target, roll, canMiss: false);
+            string line = Narrate(hit, $"{Name} unleashes Lightning Cascade on {target.Name} for {hit.Damage} damage.", string.Empty);
+
+            int arcDamage = Math.Max(1, roll / 2);
+            var arcedTo = new List<string>();
+            foreach (Enemy other in otherEnemies)
+            {
+                if (ReferenceEquals(other, target) || other.IsDead)
+                    continue;
+
+                other.TakeDamage(arcDamage);
+                arcedTo.Add(other.Name);
+            }
+
+            if (arcedTo.Count > 0)
+            {
+                line += $" It arcs to {string.Join(", ", arcedTo)} for {arcDamage} each.";
+            }
+
+            return line + $" Mana {CurrentMana}/{MaxMana}.";
         }
 
         public string CastArcaneWard()
@@ -112,7 +132,7 @@ namespace ARDO.Game.Players
             CurrentMana -= ArcaneWardCost;
             GuardDefense += 3;
             InvulnerabilityCharges += 1;
-            return $"{Name} weaves Arcane Ward. Defense rises and one strike can be turned aside. Mana {CurrentMana}/{MaxMana}.";
+            return $"{Name} weaves Arcane Ward. Defense rises and the next strike will be halved. Mana {CurrentMana}/{MaxMana}.";
         }
     }
 }

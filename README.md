@@ -11,6 +11,15 @@ This repository currently reflects the Phase 3 release of the project, including
 - Enemy encounters including goblins, fire imps, wraith heralds, and hollow captains
 - A command-driven town shop with `buy`, `sell`, `sell all`, `equip`, `unequip`, and `exit`
 - Weapons and armor that can be equipped, add to attack and defense, and stay equipped across saves
+- Target selection in group fights (`target 2`, `attack 2`), critical hits and misses
+- Enemies that telegraph heavy blows a turn ahead, plus a trick for each enemy type: goblins steal gold,
+  skeletons get back up once, fire imps set you burning, the Wraith Herald drains mana or life, and bosses enrage
+- Loot with rarities from Common to Legendary that improve with depth; Rare and better gear carries an effect
+  (burning, vampiric, keen, warded), and guardians always drop gear
+- Events between fights (a shrine, a wounded traveler, a campfire, a locked chest) and a side passage at the end
+  of each floor that trades one more fight for double gold and a rare find
+- A shop that restocks with better gear as you go deeper, and a Mana Draught for mages
+- Colored story text with health bars, revealed a line at a time
 - Real-time inventory and gold updates
 - SQLite save/load support through a repository-based data layer
 - Item selection and combat prompts with explicit cancel behavior

@@ -20,7 +20,8 @@ namespace ARDO.Core.Entities
             string description,
             RarityType rarity,
             int value,
-            int damageBonus)
+            int damageBonus,
+            ItemEffect effect = ItemEffect.None)
 
             : base(
                 name,
@@ -33,6 +34,11 @@ namespace ARDO.Core.Entities
         {
             DamageBonus = damageBonus;
             StatModifier = damageBonus;
+            Effect = effect;
         }
+
+        public override string Summary => Effect == ItemEffect.None
+            ? $"+{DamageBonus} ATK"
+            : $"+{DamageBonus} ATK, {EffectText}";
     }
 }

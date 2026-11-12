@@ -4,8 +4,8 @@
  * Project ARDO
  *
  * Class description:
- * `ItemFactory.cs` is a static factory file that creates common game items
-     for loot drops. It exposes creation methods.
+ * `ItemFactory.cs` is a static factory file that creates the fixed consumables
+    sold in the shop and dropped as loot. It exposes creation methods.
  */
 using ARDO.Core.Entities;
 using ARDO.Core.Enums;
@@ -16,24 +16,22 @@ namespace ARDO.Core.Factories
     {
         public static Consumable CreateHealthPotion()
         {
-            return new Consumable(
-                "Health Potion",
-                "Restores 50 HP.",
-                RarityType.Common,
-                25,
-                50
-            );
+            return new Consumable("Health Potion", "Restores 50 HP.", RarityType.Common, 30, 50);
         }
 
-        public static Weapon CreateIronSword()
+        public static Consumable CreateGreaterHealthPotion()
         {
-            return new Weapon(
-                "Iron Sword",
-                "A sturdy iron sword.",
-                RarityType.Common,
-                50,
-                5
-            );
+            return new Consumable("Greater Health Potion", "Restores 90 HP.", RarityType.Uncommon, 55, 90);
+        }
+
+        public static Consumable CreateManaDraught()
+        {
+            return new Consumable("Mana Draught", "Restores 40 mana.", RarityType.Common, 30, 40, ItemEffect.RestoresMana);
+        }
+
+        public static Consumable CreateTravelRation()
+        {
+            return new Consumable("Travel Ration", "A simple ration for desperate moments.", RarityType.Common, 12, 20);
         }
     }
 }

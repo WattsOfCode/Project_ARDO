@@ -12,6 +12,8 @@
  */
 using System;
 using System.Collections.Generic;
+using ARDO.Core.Entities;
+using ARDO.Core.Enums;
 using ARDO.Core.Interfaces;
 using ARDO.Game.Inventory;
 
@@ -20,6 +22,8 @@ namespace ARDO.Core.Abstracts
     public abstract class Hero : ICombatant
     {
         public const int FleeChancePercent = 60;
+        public const int BaseCritChancePercent = 10;
+        public const int MissChancePercent = 5;
 
         public int CharacterId { get; set; }
         public string Name { get; set; }
@@ -34,15 +38,26 @@ namespace ARDO.Core.Abstracts
 
         // Defense from guard moves (Defensive Guard, Shield Bash, Arcane Ward). Lasts until the enemies' turn ends.
         public int GuardDefense { get; set; }
-        // Each charge lets one hit be reduced to 0 instead of at least 1. Also cleared after the enemies' turn.
+        // Each charge halves the next hit taken (and lets it drop to 0). Also cleared after the enemies' turn.
         public int InvulnerabilityCharges { get; set; }
+
+        // Shrine blessings and the like: extra attack until the hero is back in town.
+        public int RunAttackBonus { get; set; }
+
+        public BurnEffect Burn { get; } = new();
+
+        // The last attack this hero made, so the combat log can color crits and misses.
+        public HitResult LastHit { get; private set; }
 
         public int ExperienceToNextLevel => 100 + ((Level - 1) * 75);
         public int LevelAttackBonus => Math.Max(0, (Level - 1) / 3);
         public int SpecialAttackBonus => Math.Max(0, (Level - 1) / 3) * 2;
 
-        public int WeaponDamage => Equipment.DamageBonus;
+        public int WeaponDamage => Equipment.DamageBonus + RunAttackBonus;
         public int Defense => GuardDefense + Equipment.DefenseBonus;
+
+        public int CritChancePercent =>
+            BaseCritChancePercent + (Equipment.EquippedWeapon?.Effect == ItemEffect.Keen ? 10 : 0);
 
         public bool IsAlive => CurrentHealth > 0;
         public bool IsDead => !IsAlive;
@@ -60,10 +75,58 @@ namespace ARDO.Core.Abstracts
 
         public virtual void Attack(ICombatant target)
         {
-            if (target == null)
-                return;
+            if (target is Enemy enemy)
+            {
+                Strike(enemy, BasicAttackDamage, canMiss: true);
+            }
+            else
+            {
+                target?.TakeDamage(BasicAttackDamage);
+            }
+        }
 
-            target.TakeDamage(BasicAttackDamage);
+        // Every hero attack goes through here: miss and crit rolls, then the weapon's effect.
+        public HitResult Strike(Enemy target, int baseDamage, bool canMiss)
+        {
+            if (canMiss && Random.Shared.Next(100) < MissChancePercent)
+            {
+                LastHit = HitResult.Miss;
+                return LastHit;
+            }
+
+            bool critical = Random.Shared.Next(100) < CritChancePercent;
+            int damage = critical ? (int)Math.Round(baseDamage * 1.5) : baseDamage;
+            target.TakeDamage(damage);
+
+            string notes = string.Empty;
+            switch (Equipment.EquippedWeapon?.Effect)
+            {
+                case ItemEffect.Burning when target.IsAlive:
+                    target.Burn.Apply(3, 3 + ActiveStoryNode);
+                    notes = $"{target.Name} catches fire.";
+                    break;
+
+                case ItemEffect.Vampiric:
+                    int healed = Heal(Math.Max(1, damage / 5));
+                    if (healed > 0)
+                    {
+                        notes = $"You drain {healed} HP.";
+                    }
+                    break;
+            }
+
+            LastHit = new HitResult(damage, critical, false, notes);
+            return LastHit;
+        }
+
+        // Builds the log line for an attack: "Critical hit!" in front, effect notes after.
+        protected static string Narrate(HitResult hit, string hitLine, string missLine)
+        {
+            if (hit.Missed)
+                return missLine;
+
+            string line = hit.Critical ? "Critical hit! " + hitLine : hitLine;
+            return string.IsNullOrEmpty(hit.Notes) ? line : $"{line} {hit.Notes}";
         }
 
         public virtual void TakeDamage(int damage)
@@ -76,7 +139,7 @@ namespace ARDO.Core.Abstracts
             if (InvulnerabilityCharges > 0)
             {
                 InvulnerabilityCharges--;
-                damage = Math.Max(0, damage - Defense);
+                damage = Math.Max(0, damage / 2 - Defense);
             }
             else
             {
@@ -86,10 +149,37 @@ namespace ARDO.Core.Abstracts
             CurrentHealth = Math.Max(0, CurrentHealth - damage);
         }
 
+        // Burn damage ignores armor.
+        public int TakeBurnDamage()
+        {
+            int damage = Burn.Tick();
+            CurrentHealth = Math.Max(0, CurrentHealth - damage);
+            return damage;
+        }
+
+        public int Heal(int amount)
+        {
+            int before = CurrentHealth;
+            CurrentHealth = Math.Min(MaxHealth, CurrentHealth + Math.Max(0, amount));
+            return CurrentHealth - before;
+        }
+
         public void ClearGuard()
         {
             GuardDefense = 0;
             InvulnerabilityCharges = 0;
+        }
+
+        public void ClearCombatEffects()
+        {
+            ClearGuard();
+            Burn.Clear();
+        }
+
+        public void EndDungeonRun()
+        {
+            RunAttackBonus = 0;
+            ClearCombatEffects();
         }
 
         public virtual bool GainExperience(int amount)
@@ -121,7 +211,7 @@ namespace ARDO.Core.Abstracts
         public virtual void RestoreForTown()
         {
             CurrentHealth = MaxHealth;
-            ClearGuard();
+            ClearCombatEffects();
         }
 
         public virtual bool EscapeFromCombat()

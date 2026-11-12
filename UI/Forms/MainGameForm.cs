@@ -13,6 +13,7 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 using ARDO.Core.Abstracts;
+using ARDO.Core.Enums;
 using ARDO.Data;
 using ARDO.Data.SQLite;
 using ARDO.Game;
@@ -126,7 +127,10 @@ namespace ARDO.UI.Forms
                 return;
             }
 
-            _narrativePanel.AppendNarrative($"> {normalized}");
+            // Finish showing the last turn before answering the new command.
+            _narrativePanel.FlushPending();
+            _narrativePanel.AppendNarrative("");
+            _narrativePanel.AppendNarrative($"> {normalized}", MessageTone.Command);
 
             if (_gameState is null)
             {
@@ -187,9 +191,9 @@ namespace ARDO.UI.Forms
             FocusCommandInput();
         }
 
-        public void AppendNarrative(string message)
+        public void AppendNarrative(string message, MessageTone tone = MessageTone.Normal)
         {
-            _narrativePanel.AppendNarrative(message);
+            _narrativePanel.AppendNarrative(message, tone);
         }
 
         public void ShowPlayer(Hero hero)

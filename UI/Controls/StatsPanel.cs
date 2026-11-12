@@ -10,7 +10,10 @@
 using System.Drawing;
 using System.Windows.Forms;
 using ARDO.Core.Abstracts;
+using ARDO.Core.Entities;
 using ARDO.Game.Players;
+using ARDO.Interop;
+using ARDO.UI.Display;
 
 namespace ARDO.UI.Controls
 {
@@ -39,42 +42,43 @@ namespace ARDO.UI.Controls
                 BorderStyle = BorderStyle.None,
                 BackColor = Color.Black,
                 ForeColor = Color.White,
-                Font = new Font("Consolas", 9, FontStyle.Regular),
+                Font = UiFonts.Mono(9.5f),
                 ScrollBars = RichTextBoxScrollBars.Vertical,
                 WordWrap = true
             };
 
+            DarkScrollbars.Apply(_statsBox);
             Controls.Add(_statsBox);
         }
 
         public void UpdateStats(Hero hero)
         {
             string manaLine = hero is Mage mage
-                ? $"\nMana:     {mage.CurrentMana}/{mage.MaxMana}"
+                ? $"\nMana    {TextBar.Render(mage.CurrentMana, mage.MaxMana)} {mage.CurrentMana}/{mage.MaxMana}"
                 : string.Empty;
 
-            string weapon = hero.Equipment.EquippedWeapon?.Name ?? "none";
-            string armor = hero.Equipment.EquippedArmor?.Name ?? "none";
+            Weapon? weapon = hero.Equipment.EquippedWeapon;
+            Armor? armor = hero.Equipment.EquippedArmor;
+            string weaponLine = weapon == null ? "none" : $"{weapon.Name}\n          {weapon.Summary}";
+            string armorLine = armor == null ? "none" : $"{armor.Name}\n          {armor.Summary}";
+            string blessing = hero.RunAttackBonus != 0 ? $"\nBlessing  {hero.RunAttackBonus:+#;-#} ATK this run" : string.Empty;
 
             _statsBox.Text =
 $@"================================
- HERO STATUS
+ {hero.Name}
+ Level {hero.Level} {hero.GetType().Name}
 ================================
 
-Name:     {hero.Name}
+Health  {TextBar.Render(hero.CurrentHealth, hero.MaxHealth)} {hero.CurrentHealth}/{hero.MaxHealth}{manaLine}
+XP      {TextBar.Render(hero.Experience, hero.ExperienceToNextLevel)} {hero.Experience}/{hero.ExperienceToNextLevel}
 
-Level:    {hero.Level}
-XP:       {hero.Experience}/{hero.ExperienceToNextLevel}
+Weapon    {weaponLine}
+Armor     {armorLine}{blessing}
 
-Health:   {hero.CurrentHealth}/{hero.MaxHealth}{manaLine}
-
-Weapon:   {weapon} (+{hero.WeaponDamage} ATK)
-Armor:    {armor} (+{hero.Equipment.DefenseBonus} DEF)
-
-Gold:     {hero.Gold}
+Gold      {hero.Gold}
 
 ================================";
-            _statsBox.SelectionStart = _statsBox.TextLength;
+            _statsBox.SelectionStart = 0;
             _statsBox.ScrollToCaret();
         }
 

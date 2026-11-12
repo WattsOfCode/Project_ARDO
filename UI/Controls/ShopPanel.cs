@@ -18,8 +18,10 @@ using System.Windows.Forms;
 using ARDO.Core.Abstracts;
 using ARDO.Core.Entities;
 using ARDO.Core.Enums;
+using ARDO.Core.Factories;
 using ARDO.Data;
 using ARDO.Game.Inventory;
+using ARDO.Game.Players;
 
 namespace ARDO.UI.Controls
 {
@@ -214,31 +216,39 @@ namespace ARDO.UI.Controls
             Controls.Add(root);
         }
 
+        // The merchant restocks as the hero goes deeper: each cleared floor adds better gear.
         private void BuildStock()
         {
-            _shopOffers.Add(new ShopOffer(
-                "Iron Blade",
-                40,
-                () => new Weapon("Iron Blade", "A sturdy blade from the Oakhaven merchant.", RarityType.Common, 40, 10),
-                "Sharpened weapon with steady attack gain."));
+            int floor = _hero.ActiveStoryNode;
 
-            _shopOffers.Add(new ShopOffer(
-                "Reinforced Mail",
-                30,
-                () => new Armor("Reinforced Mail", "Armor fit for the next descent.", RarityType.Common, 30, 5, EquipmentSlot.Chest),
-                "Reinforced mail with a defense bonus."));
+            AddOffer(30, ItemFactory.CreateHealthPotion);
+            AddOffer(12, ItemFactory.CreateTravelRation);
+            if (_hero is Mage)
+            {
+                AddOffer(30, ItemFactory.CreateManaDraught);
+            }
 
-            _shopOffers.Add(new ShopOffer(
-                "Tonic of Hardening",
-                50,
-                () => new Consumable("Tonic of Hardening", "A one-time draught that steadies the body.", RarityType.Common, 50, 25),
-                "Single-use tonic that restores health in battle."));
+            AddOffer(45, () => new Weapon("Iron Blade", "A sturdy blade from the Oakhaven merchant.", RarityType.Common, 45, 10));
+            AddOffer(35, () => new Armor("Reinforced Mail", "Armor fit for the next descent.", RarityType.Common, 35, 5, EquipmentSlot.Chest));
 
-            _shopOffers.Add(new ShopOffer(
-                "Travel Ration",
-                20,
-                () => new Consumable("Travel Ration", "A simple ration for desperate moments.", RarityType.Common, 20, 15),
-                "Low-cost consumable with modest healing."));
+            if (floor >= 2)
+            {
+                AddOffer(110, () => new Weapon("Emberforged Sword", "Still warm from the depths' forges.", RarityType.Uncommon, 110, 16));
+                AddOffer(90, () => new Armor("Ashen Plate", "Plate scorched black in the Emberward.", RarityType.Uncommon, 90, 9, EquipmentSlot.Chest));
+            }
+
+            if (floor >= 3)
+            {
+                AddOffer(55, ItemFactory.CreateGreaterHealthPotion);
+                AddOffer(180, () => new Weapon("Hallowed Greatblade", "Blessed in the Hollow Cathedral, before the fall.", RarityType.Rare, 180, 22, ItemEffect.Keen));
+                AddOffer(160, () => new Armor("Cathedral Ward", "Vestments that turn the first blow aside.", RarityType.Rare, 160, 13, EquipmentSlot.Chest, ItemEffect.Warded));
+            }
+        }
+
+        private void AddOffer(int price, Func<GameItem> createItem)
+        {
+            GameItem sample = createItem();
+            _shopOffers.Add(new ShopOffer(sample.Name, price, createItem, sample.Summary));
         }
 
         public void ProcessCommand(string command)
@@ -516,13 +526,7 @@ namespace ARDO.UI.Controls
                 {
                     GameItem item = inventoryItems[i];
                     string equipped = item.IsEquipped ? " [equipped]" : string.Empty;
-                    string extra = item switch
-                    {
-                        Weapon weapon => $" [+{weapon.DamageBonus} ATK]",
-                        Armor armor => $" [+{armor.DefenseBonus} DEF]",
-                        Consumable consumable => $" [heal {consumable.HealAmount}]",
-                        _ => string.Empty
-                    };
+                    string extra = string.IsNullOrEmpty(item.Summary) ? string.Empty : $" ({item.Summary})";
                     _playerItemsList.Items.Add($"{i + 1}. {item}{equipped}{extra}");
                 }
             }
@@ -533,7 +537,7 @@ namespace ARDO.UI.Controls
             for (int i = 0; i < _shopOffers.Count; i++)
             {
                 ShopOffer offer = _shopOffers[i];
-                _shopItemsList.Items.Add($"{i + 1}. {offer.DisplayName} - {offer.BuyPrice}g");
+                _shopItemsList.Items.Add($"{i + 1}. {offer.DisplayName} - {offer.BuyPrice}g ({offer.Description})");
             }
             _shopItemsList.EndUpdate();
         }

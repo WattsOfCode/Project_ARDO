@@ -110,6 +110,7 @@ namespace ARDO.Data.SQLite
                         rarity_tier TEXT NOT NULL DEFAULT 'Common',
                         equipment_slot TEXT NOT NULL DEFAULT 'None',
                         is_equipped INTEGER NOT NULL DEFAULT 0 CHECK(is_equipped IN (0, 1)),
+                        item_effect TEXT NOT NULL DEFAULT 'None',
                         FOREIGN KEY (character_id) REFERENCES characters(character_id) ON DELETE CASCADE
                     );");
 
@@ -117,6 +118,7 @@ namespace ARDO.Data.SQLite
                 EnsureColumnExists(connection, transaction, "inventory_items", "item_description", "TEXT NOT NULL DEFAULT ''");
                 EnsureColumnExists(connection, transaction, "inventory_items", "item_value", "INTEGER NOT NULL DEFAULT 0");
                 EnsureColumnExists(connection, transaction, "inventory_items", "equipment_slot", "TEXT NOT NULL DEFAULT 'None'");
+                EnsureColumnExists(connection, transaction, "inventory_items", "item_effect", "TEXT NOT NULL DEFAULT 'None'");
 
                 // Enemy stats live in the enemy classes; this table from older versions was never read.
                 Execute(connection, transaction, "DROP TABLE IF EXISTS enemy_templates;");

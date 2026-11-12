@@ -35,6 +35,19 @@ namespace ARDO.Core.Entities
 
         public int HealAmount { get; set; }
 
+        public ItemEffect Effect { get; set; }
+
+        // Short description of the item's special effect, for shop and loot lists.
+        public string EffectText => Effect switch
+        {
+            ItemEffect.Burning => "sets foes burning",
+            ItemEffect.Vampiric => "heals you on hit",
+            ItemEffect.Keen => "+10% crit",
+            ItemEffect.Warded => "halves the first hit each fight",
+            ItemEffect.RestoresMana => $"restores {StatModifier} mana",
+            _ => string.Empty
+        };
+
         public GameItem(
             string name,
             string description,
@@ -52,6 +65,9 @@ namespace ARDO.Core.Entities
             StatModifier = statModifier;
             EquippedSlot = equippedSlot;
         }
+
+        // One-line stats for lists and loot messages, e.g. "+12 ATK, sets foes burning".
+        public virtual string Summary => EffectText;
 
         public override string ToString()
         {

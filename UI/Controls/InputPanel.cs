@@ -11,6 +11,7 @@
 using System;
 using System.Drawing;
 using System.Windows.Forms;
+using ARDO.UI.Display;
 
 namespace ARDO.UI.Controls
 {
@@ -58,7 +59,7 @@ namespace ARDO.UI.Controls
                 Text = "Type a command and press Enter.",
                 ForeColor = Color.LightGray,
                 BackColor = Color.Black,
-                Font = new Font("Consolas", 9, FontStyle.Regular),
+                Font = UiFonts.Mono(9.5f),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Margin = new Padding(0)
             };
@@ -67,7 +68,7 @@ namespace ARDO.UI.Controls
             {
                 Dock = DockStyle.Fill,
 
-                Font = new Font("Consolas", 12),
+                Font = UiFonts.Mono(12f),
 
                 BackColor = Color.Black,
                 ForeColor = Color.LightGreen,
@@ -85,7 +86,7 @@ namespace ARDO.UI.Controls
 
                 Dock = DockStyle.Fill,
 
-                Font = new Font("Consolas", 10),
+                Font = UiFonts.Mono(10f),
 
                 BackColor = Color.Black,
                 ForeColor = Color.LightGreen,

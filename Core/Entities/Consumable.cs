@@ -4,7 +4,7 @@
  * Project ARDO
  *
  * Class description:
- * `Consumable.cs` is a concrete item subclass that stores healing values 
+ * `Consumable.cs` is a concrete item subclass that stores healing (or mana) values
     for inventory use. It uses constructors and inherited properties.
  */
 using ARDO.Core.Enums;
@@ -18,7 +18,8 @@ namespace ARDO.Core.Entities
             string description,
             RarityType rarity,
             int value,
-            int healAmount)
+            int amount,
+            ItemEffect effect = ItemEffect.None)
 
             : base(
                 name,
@@ -26,10 +27,17 @@ namespace ARDO.Core.Entities
                 ItemType.Consumable,
                 rarity,
                 value,
-                healAmount)
+                amount)
         {
-            HealAmount = healAmount;
-            StatModifier = healAmount;
+            Effect = effect;
+            StatModifier = amount;
+            HealAmount = RestoresMana ? 0 : amount;
         }
+
+        public bool RestoresMana => Effect == ItemEffect.RestoresMana;
+
+        public string UseText => RestoresMana ? $"restores {StatModifier} mana" : $"heals {HealAmount} HP";
+
+        public override string Summary => UseText;
     }
 }

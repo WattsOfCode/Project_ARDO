@@ -32,7 +32,7 @@ namespace ARDO.Data.SQLite
 
             const string query = @"
                 SELECT item_id, item_name, item_description, type_category, item_value,
-                       stat_modifier, rarity_tier, equipment_slot, is_equipped
+                       stat_modifier, rarity_tier, equipment_slot, is_equipped, item_effect
                 FROM inventory_items
                 WHERE character_id = @charId
                 ORDER BY item_id;";
@@ -65,9 +65,9 @@ namespace ARDO.Data.SQLite
             const string query = @"
                 INSERT INTO inventory_items
                     (character_id, item_name, item_description, type_category, item_value,
-                     stat_modifier, rarity_tier, equipment_slot, is_equipped)
+                     stat_modifier, rarity_tier, equipment_slot, is_equipped, item_effect)
                 VALUES
-                    (@charId, @name, @description, @type, @value, @modifier, @rarity, @slot, @equipped);
+                    (@charId, @name, @description, @type, @value, @modifier, @rarity, @slot, @equipped, @effect);
                 SELECT last_insert_rowid();";
 
             using var command = new SqliteCommand(query, connection);
@@ -80,6 +80,7 @@ namespace ARDO.Data.SQLite
             command.Parameters.AddWithValue("@rarity", item.Rarity.ToString());
             command.Parameters.AddWithValue("@slot", item.EquippedSlot.ToString());
             command.Parameters.AddWithValue("@equipped", item.IsEquipped ? 1 : 0);
+            command.Parameters.AddWithValue("@effect", item.Effect.ToString());
 
             object? insertedId = command.ExecuteScalar();
             item.ItemId = insertedId != null ? Convert.ToInt32(insertedId) : 0;
@@ -131,16 +132,18 @@ namespace ARDO.Data.SQLite
             int value = Convert.ToInt32(reader["item_value"]);
             int statModifier = Convert.ToInt32(reader["stat_modifier"]);
             wasEquipped = Convert.ToInt32(reader["is_equipped"]) == 1;
+            string effectText = reader["item_effect"]?.ToString() ?? ItemEffect.None.ToString();
 
             Enum.TryParse(typeText, ignoreCase: true, out ItemType itemType);
             Enum.TryParse(rarityText, ignoreCase: true, out RarityType rarity);
             Enum.TryParse(slotText, ignoreCase: true, out EquipmentSlot slot);
+            Enum.TryParse(effectText, ignoreCase: true, out ItemEffect effect);
 
             GameItem item = itemType switch
             {
-                ItemType.Weapon => new Weapon(itemName, description, rarity, value, statModifier),
-                ItemType.Armor => new Armor(itemName, description, rarity, value, statModifier, slot),
-                ItemType.Consumable => new Consumable(itemName, description, rarity, value, statModifier),
+                ItemType.Weapon => new Weapon(itemName, description, rarity, value, statModifier, effect),
+                ItemType.Armor => new Armor(itemName, description, rarity, value, statModifier, slot, effect),
+                ItemType.Consumable => new Consumable(itemName, description, rarity, value, statModifier, effect),
                 _ => new GameItem(itemName, description, itemType, rarity, value, statModifier, slot)
             };
 

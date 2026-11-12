@@ -10,7 +10,7 @@
  */
 using System.Collections.Generic;
 using ARDO.Core.Abstracts;
-using ARDO.Core.Interfaces;
+using ARDO.Core.Entities;
 
 namespace ARDO.Game.Players
 {
@@ -31,8 +31,8 @@ namespace ARDO.Game.Players
             return new List<(string, string, string)>
             {
                 ("Sword Strike", "Attack", $"Deliver a heavy blade arc. Deals {SwordStrikeDamage} physical dmg."),
-                ("Shield Bash", "Attack", $"Slam the enemy with your shield. Deals {ShieldBashDamage} dmg and braces for the counterattack."),
-                ("Defensive Guard", "Defense", "Hunker behind your shield. Greatly reduces incoming damage this turn.")
+                ("Shield Bash", "Attack", $"Slam the enemy with your shield. Deals {ShieldBashDamage} dmg, then +2 defense and the next hit is halved."),
+                ("Defensive Guard", "Defense", "Hunker behind your shield: +4 defense and the next hit is halved. Best against a heavy blow.")
             };
         }
 
@@ -43,20 +43,18 @@ namespace ARDO.Game.Players
             CurrentHealth = MaxHealth;
         }
 
-        public string SwordStrike(ICombatant target)
+        public string SwordStrike(Enemy target)
         {
-            int damage = SwordStrikeDamage;
-            target.TakeDamage(damage);
-            return $"{Name} drives Sword Strike through the enemy for {damage} damage.";
+            HitResult hit = Strike(target, SwordStrikeDamage, canMiss: false);
+            return Narrate(hit, $"{Name} drives Sword Strike through {target.Name} for {hit.Damage} damage.", string.Empty);
         }
 
-        public string ShieldBash(ICombatant target)
+        public string ShieldBash(Enemy target)
         {
-            int damage = ShieldBashDamage;
-            target.TakeDamage(damage);
+            HitResult hit = Strike(target, ShieldBashDamage, canMiss: false);
             GuardDefense += 2;
             InvulnerabilityCharges += 1;
-            return $"{Name} crashes Shield Bash for {damage} damage and braces for the counterattack.";
+            return Narrate(hit, $"{Name} crashes Shield Bash into {target.Name} for {hit.Damage} damage and braces for the counterattack.", string.Empty);
         }
 
         public string DefensiveGuard()

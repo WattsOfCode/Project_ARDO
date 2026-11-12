@@ -10,8 +10,11 @@
  */
 namespace ARDO.Game.Enemies
 {
+    // A skeleton pulls itself back together the first time it falls.
     public class Skeleton : Minion
     {
+        private bool _hasReassembled;
+
         public Skeleton() : base("Skeleton", 55, 8, 25, 15)
         {
         }
@@ -19,5 +22,17 @@ namespace ARDO.Game.Enemies
         public override string ArtKey => "skeleton";
 
         public override string AttackLine => "rattles forward with a bone-sharp strike.";
+
+        public override void TakeDamage(int amount)
+        {
+            base.TakeDamage(amount);
+
+            if (IsDead && !_hasReassembled)
+            {
+                _hasReassembled = true;
+                CurrentHealth = MaxHealth / 3;
+                Announce($"{Name}'s bones scatter... then drag themselves back together! ({CurrentHealth} HP)");
+            }
+        }
     }
 }
