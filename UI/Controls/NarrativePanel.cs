@@ -12,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using ARDO.Core.Enums;
 using ARDO.Interop;
@@ -33,6 +34,14 @@ namespace ARDO.UI.Controls
         private readonly System.Windows.Forms.Timer _revealTimer = new() { Interval = RevealIntervalMs };
 
         private RichTextBox _narrativeBox = null!;
+
+        // A menu option inside a line: a number at the start or after a wide gap,
+        // like "1. New game    2. Load game" or "1 Shop   2 Rest (10g)".
+        // A leading ">" marks the current target in the combat board.
+        private static readonly Regex OptionPattern = new(@"(?:^[\s>]*|\s{2,})(\d+)[.)]?\s+\S");
+
+        // Raised when the player clicks a menu line: (the option's number, the whole line).
+        public event Action<string, string>? OptionClicked;
 
         // True between a banner's opening and closing "===" rules; banner lines are centered.
         private bool _inBanner;
@@ -75,6 +84,7 @@ namespace ARDO.UI.Controls
                 ScrollBars = RichTextBoxScrollBars.Vertical
             };
 
+            _narrativeBox.MouseClick += HandleOptionClick;
             _narrativeBox.HandleCreated += (_, __) => RichTextSpacing.Apply(_narrativeBox, LineHeight, PointsAfterLine);
 
             DarkScrollbars.Apply(_narrativeBox);
@@ -100,6 +110,38 @@ namespace ARDO.UI.Controls
         }
 
         // Shows everything still waiting, e.g. when the player types the next command.
+        // Finds the numbered option under the mouse, if the clicked line is a menu.
+        private void HandleOptionClick(object? sender, MouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Left || _narrativeBox.TextLength == 0)
+                return;
+
+            int charIndex = _narrativeBox.GetCharIndexFromPosition(e.Location);
+            Point charPoint = _narrativeBox.GetPositionFromCharIndex(charIndex);
+            if (Math.Abs(e.Y - (charPoint.Y + _regularFont.Height / 2)) > _regularFont.Height)
+                return;
+
+            string text = _narrativeBox.Text;
+            int lineStart = charIndex > 0 ? text.LastIndexOf('\n', Math.Min(charIndex, text.Length) - 1) + 1 : 0;
+            int lineEnd = text.IndexOf('\n', lineStart);
+            string line = text[lineStart..(lineEnd < 0 ? text.Length : lineEnd)];
+            int column = charIndex - lineStart;
+
+            // Only lines that open with an option count, so story text with numbers is ignored.
+            MatchCollection options = OptionPattern.Matches(line);
+            if (options.Count == 0 || options[0].Index != 0)
+                return;
+
+            Match chosen = options[0];
+            foreach (Match option in options)
+            {
+                if (option.Index <= column)
+                    chosen = option;
+            }
+
+            OptionClicked?.Invoke(chosen.Groups[1].Value, line);
+        }
+
         public void FlushPending()
         {
             _revealTimer.Stop();

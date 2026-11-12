@@ -33,6 +33,8 @@ namespace ARDO.UI.Controls
 
         public event EventHandler? CloseRequested;
 
+        public event Action<string>? CommandSuggested;
+
         public string CommandHint => "Inventory: use 1, equip 1, unequip 1, drop 1, gear, exit.";
 
         public InventoryPanel(Hero hero, IPlayerRepository playerRepo, Action? refreshStatus = null)
@@ -85,6 +87,18 @@ namespace ARDO.UI.Controls
             };
 
             _itemsList = new ItemListBox();
+            _itemsList.RowClicked += index =>
+            {
+                List<GameItem> items = _hero.HeroInventory.GetItems();
+                if (index >= items.Count)
+                    return;
+
+                GameItem item = items[index];
+                (string verb, string action) = !EquipmentManager.CanEquip(item) ? ("use", "use")
+                    : item.IsEquipped ? ("unequip", "take off") : ("equip", "equip");
+                _feedbackLabel.Text = $"Press Enter to {action} {item.Name}.";
+                CommandSuggested?.Invoke($"{verb} {index + 1}");
+            };
 
             _feedbackLabel = new Label
             {

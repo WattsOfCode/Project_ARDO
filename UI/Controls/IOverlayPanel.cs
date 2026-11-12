@@ -19,6 +19,10 @@ namespace ARDO.UI.Controls
 
         event EventHandler? CloseRequested;
 
+        // Raised when the player clicks an option: the command is put in the
+        // command box, and Enter runs it.
+        event Action<string>? CommandSuggested;
+
         void ProcessCommand(string command);
     }
 }

@@ -35,12 +35,14 @@ namespace ARDO.UI.Controls
         private readonly List<ShopOffer> _shopOffers = new();
 
         private Label _titleLabel = null!;
-        private ListBox _playerItemsList = null!;
-        private ListBox _shopItemsList = null!;
+        private ItemListBox _playerItemsList = null!;
+        private ItemListBox _shopItemsList = null!;
         private Label _playerGoldLabel = null!;
         private Label _feedbackLabel = null!;
 
         public event EventHandler? CloseRequested;
+
+        public event Action<string>? CommandSuggested;
 
         public string CommandHint => "Shop commands: buy 1, sell 1, sell all, equip 1, unequip 1, exit.";
 
@@ -120,13 +122,12 @@ namespace ARDO.UI.Controls
                 TextAlign = ContentAlignment.MiddleCenter
             };
 
-            _playerItemsList = new ListBox
+            _playerItemsList = new ItemListBox();
+            _playerItemsList.RowClicked += index =>
             {
-                Dock = DockStyle.Fill,
-                BackColor = Color.Black,
-                ForeColor = Color.LightGreen,
-                Font = new Font("Consolas", 11, FontStyle.Regular),
-                BorderStyle = BorderStyle.FixedSingle
+                List<GameItem> items = _hero.HeroInventory.GetItems();
+                if (index < items.Count)
+                    Suggest($"sell {index + 1}", $"Press Enter to sell {items[index].Name}.");
             };
 
             _playerGoldLabel = new Label
@@ -164,13 +165,11 @@ namespace ARDO.UI.Controls
                 TextAlign = ContentAlignment.MiddleCenter
             };
 
-            _shopItemsList = new ListBox
+            _shopItemsList = new ItemListBox();
+            _shopItemsList.RowClicked += index =>
             {
-                Dock = DockStyle.Fill,
-                BackColor = Color.Black,
-                ForeColor = Color.LightSkyBlue,
-                Font = new Font("Consolas", 11, FontStyle.Regular),
-                BorderStyle = BorderStyle.FixedSingle
+                if (index < _shopOffers.Count)
+                    Suggest($"buy {index + 1}", $"Press Enter to buy {_shopOffers[index].DisplayName} for {_shopOffers[index].BuyPrice}g.");
             };
 
             shopPanel.Controls.Add(shopTitle, 0, 0);
@@ -273,6 +272,13 @@ namespace ARDO.UI.Controls
         {
             (string name, string description) = _hero is Mage ? staff : blade;
             return new Weapon(name, description, rarity, value, damage, effect);
+        }
+
+        // A click puts the command in the box; Enter runs it.
+        private void Suggest(string command, string message)
+        {
+            _feedbackLabel.Text = message;
+            CommandSuggested?.Invoke(command);
         }
 
         private void AddOffer(int price, Func<GameItem> createItem)
@@ -548,7 +554,7 @@ namespace ARDO.UI.Controls
             List<GameItem> inventoryItems = _hero.HeroInventory.GetItems();
             if (inventoryItems.Count == 0)
             {
-                _playerItemsList.Items.Add("(no items)");
+                _playerItemsList.AddLine("(no items)", Color.LightGray);
             }
             else
             {
@@ -557,7 +563,7 @@ namespace ARDO.UI.Controls
                     GameItem item = inventoryItems[i];
                     string equipped = item.IsEquipped ? " [equipped]" : string.Empty;
                     string extra = string.IsNullOrEmpty(item.Summary) ? string.Empty : $" ({item.Summary})";
-                    _playerItemsList.Items.Add($"{i + 1}. {item}{equipped}{extra}");
+                    _playerItemsList.AddLine($"{i + 1}. {item}{equipped}{extra}", Color.LightGreen);
                 }
             }
             _playerItemsList.EndUpdate();
@@ -567,7 +573,7 @@ namespace ARDO.UI.Controls
             for (int i = 0; i < _shopOffers.Count; i++)
             {
                 ShopOffer offer = _shopOffers[i];
-                _shopItemsList.Items.Add($"{i + 1}. {offer.DisplayName} - {offer.BuyPrice}g ({offer.Description})");
+                _shopItemsList.AddLine($"{i + 1}. {offer.DisplayName} - {offer.BuyPrice}g ({offer.Description})", Color.LightSkyBlue);
             }
             _shopItemsList.EndUpdate();
         }

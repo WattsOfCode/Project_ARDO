@@ -105,6 +105,9 @@ namespace ARDO.UI.Forms
             _inputPanel.CommandSubmitted += HandleCommand;
             _inputPanel.CancelPressed += HandleCancel;
             _inputPanel.ScrollRequested += direction => _narrativePanel.ScrollPage(direction);
+            // In a fight, the enemy rows (the ones with a health bar) mean "hit this one".
+            _narrativePanel.OptionClicked += (number, line) =>
+                _inputPanel.SuggestCommand(_gameState?.InCombat == true && line.Contains('[') ? $"attack {number}" : number);
             _quickActions.CommandChosen += command =>
             {
                 HandleCommand(command);
@@ -284,6 +287,7 @@ namespace ARDO.UI.Forms
             _storyHost.Controls.Remove(_narrativePanel);
             _storyHost.Controls.Add(panel);
             panel.BringToFront();
+            panel.CommandSuggested += _inputPanel.SuggestCommand;
             SetCommandContext(panel.CommandHint);
             FocusCommandInput();
         }

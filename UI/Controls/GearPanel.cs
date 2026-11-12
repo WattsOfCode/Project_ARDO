@@ -36,6 +36,8 @@ namespace ARDO.UI.Controls
 
         public event EventHandler? CloseRequested;
 
+        public event Action<string>? CommandSuggested;
+
         public string CommandHint => "Gear: equip 1, unequip shield (any slot name, or a number), inventory, exit.";
 
         public GearPanel(Hero hero, IPlayerRepository playerRepo, Action? refreshStatus = null)
@@ -113,6 +115,15 @@ namespace ARDO.UI.Controls
             };
 
             _gearList = new ItemListBox(9.5f);
+            _gearList.RowClicked += index =>
+            {
+                if (index >= _gear.Count)
+                    return;
+
+                GameItem item = _gear[index];
+                _feedbackLabel.Text = $"Press Enter to {(item.IsEquipped ? "take off" : "equip")} {item.Name}.";
+                CommandSuggested?.Invoke($"{(item.IsEquipped ? "unequip" : "equip")} {index + 1}");
+            };
 
             side.Controls.Add(_totalsLabel, 0, 0);
             side.Controls.Add(gearTitle, 0, 1);

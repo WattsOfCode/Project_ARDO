@@ -7,7 +7,10 @@
  * `StatsPanel.cs` is a concrete WinForms control that displays the active hero's health, 
     mana, XP, level, and gold. It uses private UI fields and public update methods.
  */
+using System;
+using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 using ARDO.Core.Abstracts;
 using ARDO.Core.Entities;
@@ -21,6 +24,10 @@ namespace ARDO.UI.Controls
     public partial class StatsPanel : UserControl
     {
         private RichTextBox _statsBox = null!;
+
+        // The text as written; it is padded on the left to sit centered in the box.
+        private string _rawText = string.Empty;
+        private bool _scrollToEnd;
 
         public StatsPanel()
         {
@@ -45,8 +52,10 @@ namespace ARDO.UI.Controls
                 ForeColor = Color.White,
                 Font = UiFonts.Mono(9.5f),
                 ScrollBars = RichTextBoxScrollBars.Vertical,
-                WordWrap = true
+                WordWrap = false
             };
+
+            _statsBox.Resize += (_, __) => Render();
 
             DarkScrollbars.Apply(_statsBox);
             Controls.Add(_statsBox);
@@ -66,7 +75,7 @@ namespace ARDO.UI.Controls
                 : $"+{hero.Equipment.DefenseBonus} DEF\n          {pieces} of {EquipmentManager.ArmorSlots.Length} slots filled";
             string blessing = hero.RunAttackBonus != 0 ? $"\nBlessing  {hero.RunAttackBonus:+#;-#} ATK this run" : string.Empty;
 
-            _statsBox.Text =
+            _rawText =
 $@"================================
 {HeaderLine(hero)}
 ================================
@@ -80,8 +89,8 @@ Armor     {armorLine}{blessing}
 Gold      {hero.Gold}
 
 ================================";
-            _statsBox.SelectionStart = 0;
-            _statsBox.ScrollToCaret();
+            _scrollToEnd = false;
+            Render();
         }
 
         // Name on the left, level and class pushed right to the edge of the rule.
@@ -100,7 +109,7 @@ Gold      {hero.Gold}
 
         public void ShowPlaceholder(string message)
         {
-            _statsBox.Text =
+            _rawText =
 $@"================================
  STATUS
 ================================
@@ -108,8 +117,39 @@ $@"================================
 {message}
 
 ================================";
-            _statsBox.SelectionStart = _statsBox.TextLength;
+            _scrollToEnd = true;
+            Render();
+        }
+
+        // Centers the whole block (not each line), so the bars and values stay lined up.
+        private void Render()
+        {
+            string[] lines = _rawText.Replace("\r", "").Split('\n');
+            int charWidth = Math.Max(1, TextRenderer.MeasureText("WWWWWWWWWW", _statsBox.Font, Size.Empty, TextFormatFlags.NoPadding).Width / 10);
+            int fits = _statsBox.ClientSize.Width / charWidth;
+            lines = lines.SelectMany(line => Wrap(line, Math.Max(20, fits - 1))).ToArray();
+            int widest = lines.Max(line => line.Length);
+            string pad = new string(' ', Math.Max(0, (fits - widest) / 2));
+
+            _statsBox.Text = string.Join("\n", lines.Select(line => line.Length == 0 ? line : pad + line));
+            _statsBox.SelectionStart = _scrollToEnd ? _statsBox.TextLength : 0;
             _statsBox.ScrollToCaret();
+        }
+
+        // Breaks a long line (like a placeholder sentence) at spaces so it fits the box.
+        private static IEnumerable<string> Wrap(string line, int width)
+        {
+            while (line.Length > width)
+            {
+                int cut = line.LastIndexOf(' ', width);
+                if (cut <= 0)
+                    cut = width;
+
+                yield return line[..cut].TrimEnd();
+                line = line[cut..].TrimStart();
+            }
+
+            yield return line;
         }
     }
 }

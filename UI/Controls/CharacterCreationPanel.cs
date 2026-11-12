@@ -41,6 +41,8 @@ namespace ARDO.UI.Controls
 
         public event EventHandler? CloseRequested;
 
+        public event Action<string>? CommandSuggested;
+
         // Raised once both a name and a class are chosen: (name, "Warrior" or "Mage").
         public event Action<string, string>? HeroChosen;
 
@@ -227,7 +229,7 @@ namespace ARDO.UI.Controls
             {
                 control.BackColor = Color.Black;
                 control.Cursor = Cursors.Hand;
-                control.Click += (_, __) => ChooseClass(index);
+                control.Click += (_, __) => ClickCard(index);
             }
 
             return card;
@@ -291,6 +293,26 @@ namespace ARDO.UI.Controls
             _feedbackLabel.Text = string.Empty;
             RefreshView();
             Finish();
+        }
+
+        // Before a name, a click just picks the class. After it, the click selects
+        // the card and puts its number in the command box; Enter confirms.
+        private void ClickCard(int index)
+        {
+            if (_name == null)
+            {
+                ChooseClass(index);
+                return;
+            }
+
+            _chosenClass = index;
+            foreach (Panel card in _cards)
+            {
+                card.Invalidate();
+            }
+
+            _feedbackLabel.Text = $"Press Enter to set out as {_name} the {Classes[index].Class}.";
+            CommandSuggested?.Invoke($"{index + 1}");
         }
 
         private void ChooseClass(int index)

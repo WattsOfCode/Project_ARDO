@@ -192,6 +192,14 @@ namespace ARDO.UI.Controls
             CommandSubmitted?.Invoke(command);
         }
 
+        // Puts a command in the box, ready for Enter, e.g. after a click on a list.
+        public void SuggestCommand(string command)
+        {
+            _commandInput.Text = command;
+            _commandInput.SelectionStart = _commandInput.TextLength;
+            _commandInput.Focus();
+        }
+
         public void FocusInput()
         {
             _commandInput.Focus();
