@@ -6,3 +6,6 @@ ardo.db
 
 # Built game: attach it to a GitHub release instead of committing it.
 publish/
+
+# Local shortcut to the built game
+Play ARDO.lnk
