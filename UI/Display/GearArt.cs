@@ -5,8 +5,9 @@
  *
  * Class description:
  * `GearArt.cs` holds the gear screen picture: the shield, the armored figure and
-    the sword stamped side by side onto one character grid, plus where each
-    equipment slot's label belongs and what it says for the current hero.
+    the hero's weapon (a sword, or a staff for a mage) stamped side by side onto
+    one character grid, plus where each equipment slot's label belongs and what
+    it says for the current hero.
  */
 using System;
 using System.Collections.Generic;
@@ -14,6 +15,7 @@ using System.Drawing;
 using ARDO.Core.Abstracts;
 using ARDO.Core.Entities;
 using ARDO.Core.Enums;
+using ARDO.Game.Players;
 using ARDO.Interop;
 using ARDO.UI.Controls;
 
@@ -24,12 +26,13 @@ namespace ARDO.UI.Display
         // Left labels point at the first mark on their row, right labels at the last.
         public sealed record SlotLabel(EquipmentSlot Slot, bool Left, int Row, string ItemText, string StatText, Color ItemColor);
 
-        // Where each piece of art sits on the canvas (row, column).
+        // Where each piece of art sits on the canvas (row, column). The weapon goes
+        // in the last spot; both weapon pictures are the same size.
         private static readonly (string File, int Row, int Col)[] Pieces =
         {
             ("armor-figure", 0, 23),
             ("shield", 21, 0),
-            ("sword", 21, 72)
+            ("weapon", 21, 72)
         };
 
         // Each slot's label sits beside the canvas row that shows that piece of armor.
@@ -43,22 +46,28 @@ namespace ARDO.UI.Display
             (EquipmentSlot.Weapon, false, 40)
         };
 
-        private static string[]? _canvas;
+        private static readonly Dictionary<string, string[]> Canvases = new();
 
-        // The three art files stamped onto one grid. Built once; the art never changes.
-        public static string[] Canvas
+        // Mages carry a staff; everyone else a sword.
+        public static string WeaponArtFor(Hero hero) => hero is Mage ? "staff" : "sword";
+
+        // The three art files stamped onto one grid. Built once per weapon picture.
+        public static string[] CanvasFor(Hero hero)
         {
-            get
+            string weapon = WeaponArtFor(hero);
+            if (!Canvases.TryGetValue(weapon, out string[]? canvas))
             {
-                _canvas ??= BuildCanvas();
-                return _canvas;
+                canvas = BuildCanvas(weapon);
+                Canvases[weapon] = canvas;
             }
+
+            return canvas;
         }
 
         public static List<SlotLabel> LabelsFor(Hero hero)
         {
             var labels = new List<SlotLabel>();
-            string[] canvas = Canvas;
+            string[] canvas = CanvasFor(hero);
 
             foreach ((EquipmentSlot slot, bool left, int row) in SlotRows)
             {
@@ -81,12 +90,13 @@ namespace ARDO.UI.Display
 
         private static GameItem? EquippedIn(Hero hero, EquipmentSlot slot) => hero.Equipment.ItemIn(slot);
 
-        private static string[] BuildCanvas()
+        private static string[] BuildCanvas(string weapon)
         {
             var art = new List<(string[] Lines, int Row, int Col)>();
             int height = 0, width = 0;
-            foreach ((string file, int row, int col) in Pieces)
+            foreach ((string piece, int row, int col) in Pieces)
             {
+                string file = piece == "weapon" ? weapon : piece;
                 string[] pieceLines = AsciiArtLoader.LoadArt("Gear", file).Replace("\r", "").TrimEnd('\n').Split('\n');
                 art.Add((pieceLines, row, col));
                 height = Math.Max(height, row + pieceLines.Length);

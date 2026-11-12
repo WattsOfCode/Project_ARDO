@@ -29,6 +29,7 @@ namespace ARDO.UI.Controls
         private Font? _artFont;
         private Size _fittedFor;
         private int _fittedWidth;
+        private string[] _canvas = Array.Empty<string>();
         private List<GearArt.SlotLabel> _labels = new();
 
         public GearArtView()
@@ -40,8 +41,15 @@ namespace ARDO.UI.Controls
             TabStop = false;
         }
 
-        public void SetLabels(List<GearArt.SlotLabel> labels)
+        public void SetArt(string[] canvas, List<GearArt.SlotLabel> labels)
         {
+            if (!ReferenceEquals(canvas, _canvas))
+            {
+                _artFont?.Dispose();
+                _artFont = null;
+            }
+
+            _canvas = canvas;
             _labels = labels;
             Invalidate();
         }
@@ -50,7 +58,7 @@ namespace ARDO.UI.Controls
         {
             base.OnPaint(e);
 
-            string[] canvas = GearArt.Canvas;
+            string[] canvas = _canvas;
             if (canvas.Length == 0 || Width <= 0 || Height <= 0)
                 return;
 

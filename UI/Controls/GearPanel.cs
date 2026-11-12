@@ -231,7 +231,7 @@ namespace ARDO.UI.Controls
 
         private void RefreshView()
         {
-            _artView.SetLabels(GearArt.LabelsFor(_hero));
+            _artView.SetArt(GearArt.CanvasFor(_hero), GearArt.LabelsFor(_hero));
 
             _totalsLabel.Text =
                 $"Attack   {_hero.BasicAttackDamage}  (+{_hero.WeaponDamage} gear)\n" +
