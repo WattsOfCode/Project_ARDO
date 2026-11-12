@@ -130,7 +130,7 @@ namespace ARDO.UI.Display
             for (int i = 0; i < _cachedSlots.Rows.Count; i++)
             {
                 DataRow row = _cachedSlots.Rows[i];
-                _form.AppendNarrative($"{i + 1}. {row["name"],-22} Level {row["level"],-3} {row["class_type"]}");
+                _form.AppendNarrative($"{i + 1}. {row["name"],-18} Level {row["level"],-3} {row["class_type"]}");
             }
 
             _form.SetCommandContext($"Load: pick a hero 1 to {_cachedSlots.Rows.Count}, or 0 to go back.");

@@ -22,7 +22,7 @@ namespace ARDO.UI.Controls
 {
     public class CharacterCreationPanel : UserControl, IOverlayPanel
     {
-        private const int MaxNameLength = 20;
+        private const int MaxNameLength = 16;
         private const string NameHint = "Type your hero's name and press Enter. Esc returns to the start screen.";
         private const string ClassHint = "Pick a class: 1 Warrior or 2 Mage (or click a card). Type back to rename.";
 

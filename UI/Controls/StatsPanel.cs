@@ -68,8 +68,7 @@ namespace ARDO.UI.Controls
 
             _statsBox.Text =
 $@"================================
- {hero.Name}
- Level {hero.Level} {hero.GetType().Name}
+{HeaderLine(hero)}
 ================================
 
 Health  {TextBar.Render(hero.CurrentHealth, hero.MaxHealth)} {hero.CurrentHealth}/{hero.MaxHealth}{manaLine}
@@ -83,6 +82,20 @@ Gold      {hero.Gold}
 ================================";
             _statsBox.SelectionStart = 0;
             _statsBox.ScrollToCaret();
+        }
+
+        // Name on the left, level and class pushed right to the edge of the rule.
+        private const int RuleWidth = 32;
+
+        private static string HeaderLine(Hero hero)
+        {
+            string name = " " + hero.Name;
+            string right = $"Level {hero.Level} {hero.GetType().Name}";
+            if (name.Length + 2 + right.Length > RuleWidth)
+                right = $"Lv {hero.Level} {hero.GetType().Name}";
+
+            int gap = System.Math.Max(2, RuleWidth - name.Length - right.Length);
+            return name + new string(' ', gap) + right;
         }
 
         public void ShowPlaceholder(string message)
