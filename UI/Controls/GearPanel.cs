@@ -36,7 +36,7 @@ namespace ARDO.UI.Controls
 
         public event EventHandler? CloseRequested;
 
-        public string CommandHint => "Gear: equip 1, unequip weapon, unequip chest, inventory, exit.";
+        public string CommandHint => "Gear: equip 1, unequip shield (any slot name, or a number), inventory, exit.";
 
         public GearPanel(Hero hero, IPlayerRepository playerRepo, Action? refreshStatus = null)
         {
@@ -151,7 +151,7 @@ namespace ARDO.UI.Controls
             string[] parts = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length < 2)
             {
-                ShowFeedback("Use equip 1, unequip weapon or unequip chest, or exit.");
+                ShowFeedback("Use equip 1, or unequip and a slot name, like unequip shield. Type exit to leave.");
                 return;
             }
 
@@ -166,7 +166,7 @@ namespace ARDO.UI.Controls
                     Unequip(parts[1]);
                     break;
                 default:
-                    ShowFeedback("Unknown command. Use equip 1, unequip weapon, unequip chest, or exit.");
+                    ShowFeedback("Unknown command. Use equip 1, unequip shield (any slot), or exit.");
                     break;
             }
         }
@@ -195,16 +195,23 @@ namespace ARDO.UI.Controls
                 : $"Equipped {item.Name}.");
         }
 
-        // Accepts a slot name ("weapon", "chest"/"armor") or a number from the gear list.
+        // Accepts a slot name ("shield", "helm", "armor") or a number from the gear list.
         private void Unequip(string choice)
         {
-            GameItem? item = choice switch
+            EquipmentSlot? slot = choice switch
             {
-                "weapon" or "sword" => _hero.Equipment.EquippedWeapon,
-                "chest" or "armor" or "armour" => _hero.Equipment.EquippedArmor,
-                _ when int.TryParse(choice, out int n) && n >= 1 && n <= _gear.Count => _gear[n - 1],
+                "weapon" or "sword" or "staff" => EquipmentSlot.Weapon,
+                "helmet" or "helm" or "head" => EquipmentSlot.Helmet,
+                "chest" or "armor" or "armour" or "body" => EquipmentSlot.Chest,
+                "shield" => EquipmentSlot.Shield,
+                "boots" or "feet" => EquipmentSlot.Boots,
+                "ring" => EquipmentSlot.Ring,
                 _ => null
             };
+
+            GameItem? item = slot is EquipmentSlot named
+                ? _hero.Equipment.ItemIn(named)
+                : int.TryParse(choice, out int n) && n >= 1 && n <= _gear.Count ? _gear[n - 1] : null;
 
             if (item == null || !_hero.Equipment.Unequip(item))
             {
@@ -230,7 +237,7 @@ namespace ARDO.UI.Controls
                 $"Attack   {_hero.BasicAttackDamage}  (+{_hero.WeaponDamage} gear)\n" +
                 $"Defense  {_hero.Defense}\n" +
                 $"Crit     {_hero.CritChancePercent}%\n" +
-                $"Flee     {Hero.FleeChancePercent}%\n\n" +
+                $"Flee     {_hero.FleeChancePercent}%\n\n" +
                 $"Gold     {_hero.Gold}g";
 
             _gear = _hero.HeroInventory.GetItems().Where(EquipmentManager.CanEquip).ToList();

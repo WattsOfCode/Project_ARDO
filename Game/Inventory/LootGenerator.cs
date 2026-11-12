@@ -32,7 +32,19 @@ namespace ARDO.Game.Inventory
 
         private static readonly string[] FloorMaterials = { "Iron", "Emberforged", "Hallowed", "Kingsbane" };
         private static readonly string[] WeaponNames = { "Blade", "Axe", "Spear", "Staff", "Mace" };
-        private static readonly string[] ArmorNames = { "Mail", "Cuirass", "Robe", "Plate" };
+
+        // Per armor slot: how often it drops (out of 100), its share of a chest piece's defense,
+        // the names it can take, and the effect it carries at Rare and above.
+        private sealed record SlotStyle(EquipmentSlot Slot, int Weight, double DefenseShare, string[] Names, ItemEffect RareEffect);
+
+        private static readonly SlotStyle[] ArmorStyles =
+        {
+            new(EquipmentSlot.Chest, 32, 1.0, new[] { "Mail", "Cuirass", "Robe", "Plate" }, ItemEffect.Warded),
+            new(EquipmentSlot.Helmet, 20, 0.5, new[] { "Helm", "Hood", "Coif" }, ItemEffect.None),
+            new(EquipmentSlot.Shield, 20, 0.7, new[] { "Buckler", "Kite Shield", "Tower Shield" }, ItemEffect.Bulwark),
+            new(EquipmentSlot.Boots, 18, 0.45, new[] { "Boots", "Greaves", "Striders" }, ItemEffect.Swift),
+            new(EquipmentSlot.Ring, 10, 0.3, new[] { "Ring", "Band", "Signet" }, ItemEffect.Keen)
+        };
         private static readonly ItemEffect[] WeaponEffects = { ItemEffect.Burning, ItemEffect.Vampiric, ItemEffect.Keen };
 
         // The regular drop after a won fight: often a potion, sometimes gear, sometimes nothing.
@@ -92,19 +104,45 @@ namespace ARDO.Game.Inventory
             return new Weapon(name, "Pulled from the dark below Oakhaven.", rarity, PriceFor(damage, rarity), damage, effect);
         }
 
-        public static Armor CreateArmor(int floor, RarityType rarity)
+        // Armor for a random slot, or for the slot asked for.
+        public static Armor CreateArmor(int floor, RarityType rarity, EquipmentSlot? slot = null)
         {
             floor = Math.Clamp(floor, 1, FloorMaterials.Length);
-            int defense = (int)Math.Round((1 + 2.5 * floor) * RarityMultiplier[(int)rarity]);
-            ItemEffect effect = rarity >= RarityType.Rare ? ItemEffect.Warded : ItemEffect.None;
+            SlotStyle style = slot is EquipmentSlot wanted
+                ? Array.Find(ArmorStyles, s => s.Slot == wanted) ?? ArmorStyles[0]
+                : RollSlot();
 
-            string name = $"{FloorMaterials[floor - 1]} {Pick(ArmorNames)}";
-            if (effect == ItemEffect.Warded)
+            double chestDefense = (1 + 2.5 * floor) * RarityMultiplier[(int)rarity];
+            int defense = Math.Max(1, (int)Math.Round(chestDefense * style.DefenseShare));
+            ItemEffect effect = rarity >= RarityType.Rare ? style.RareEffect : ItemEffect.None;
+
+            string name = $"{FloorMaterials[floor - 1]} {Pick(style.Names)}";
+            name = effect switch
             {
-                name = $"Warded {name}";
+                ItemEffect.Warded => $"Warded {name}",
+                ItemEffect.Bulwark => $"{name} of the Bulwark",
+                ItemEffect.Swift => $"Swift {name}",
+                ItemEffect.Keen => $"Keen {name}",
+                _ => name
+            };
+
+            // Effects are worth paying for even on small pieces.
+            int price = PriceFor(defense * 2, rarity) + (effect == ItemEffect.None ? 0 : 40);
+            return new Armor(name, "Pulled from the dark below Oakhaven.", rarity, price, defense, style.Slot, effect);
+        }
+
+        private static SlotStyle RollSlot()
+        {
+            int roll = Random.Shared.Next(100);
+            foreach (SlotStyle style in ArmorStyles)
+            {
+                if (roll < style.Weight)
+                    return style;
+
+                roll -= style.Weight;
             }
 
-            return new Armor(name, "Pulled from the dark below Oakhaven.", rarity, PriceFor(defense * 2, rarity), defense, EquipmentSlot.Chest, effect);
+            return ArmorStyles[0];
         }
 
         private static GameItem RollConsumable(int floor, Hero hero)

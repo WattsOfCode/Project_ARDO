@@ -109,10 +109,16 @@ namespace ARDO.Game.Combat
                 Say("This is not just another fight. It is the end of the road you have been walking.");
             }
 
-            if (_player.Equipment.EquippedArmor?.Effect == ItemEffect.Warded)
+            if (_player.Equipment.FirstWithEffect(ItemEffect.Warded) is GameItem ward)
             {
                 _player.InvulnerabilityCharges = 1;
-                Say($"Your {_player.Equipment.EquippedArmor.Name} hums. The first blow against you will be halved.", MessageTone.Dim);
+                Say($"Your {ward.Name} hums. The first blow against you will be halved.", MessageTone.Dim);
+            }
+
+            if (_player.Equipment.FirstWithEffect(ItemEffect.Bulwark) is GameItem shield)
+            {
+                _player.BulwarkReady = true;
+                Say($"You set your {shield.Name}. The first heavy blow will break against it.", MessageTone.Dim);
             }
 
             UpdateBattlefieldDisplay();
@@ -292,7 +298,7 @@ namespace ARDO.Game.Combat
             Say("1. Basic Attack        2. Special Ability");
             Say(_isFinalBossEncounter
                 ? "3. Flee (no escape)    4. Use Item"
-                : $"3. Flee ({Hero.FleeChancePercent}%)          4. Use Item");
+                : $"3. Flee ({_player.FleeChancePercent}%)          4. Use Item");
             if (_enemies.Count(enemy => enemy.IsAlive) > 1)
             {
                 Say("Type 'target 2' to switch targets, or 'attack 2' to hit enemy 2.", MessageTone.Dim);

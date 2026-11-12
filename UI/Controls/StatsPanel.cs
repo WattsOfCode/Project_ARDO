@@ -11,6 +11,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using ARDO.Core.Abstracts;
 using ARDO.Core.Entities;
+using ARDO.Game.Inventory;
 using ARDO.Game.Players;
 using ARDO.Interop;
 using ARDO.UI.Display;
@@ -58,9 +59,11 @@ namespace ARDO.UI.Controls
                 : string.Empty;
 
             Weapon? weapon = hero.Equipment.EquippedWeapon;
-            Armor? armor = hero.Equipment.EquippedArmor;
+            int pieces = hero.Equipment.ArmorPiecesWorn;
             string weaponLine = weapon == null ? "none" : $"{weapon.Name}\n          {weapon.Summary}";
-            string armorLine = armor == null ? "none" : $"{armor.Name}\n          {armor.Summary}";
+            string armorLine = pieces == 0
+                ? "none"
+                : $"+{hero.Equipment.DefenseBonus} DEF\n          {pieces} of {EquipmentManager.ArmorSlots.Length} slots filled";
             string blessing = hero.RunAttackBonus != 0 ? $"\nBlessing  {hero.RunAttackBonus:+#;-#} ATK this run" : string.Empty;
 
             _statsBox.Text =

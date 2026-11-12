@@ -9,6 +9,8 @@
     save, read, update, and remove item records from the database.
  */
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Data.Sqlite;
 using ARDO.Core.Abstracts;
 using ARDO.Core.Entities;
@@ -105,18 +107,27 @@ namespace ARDO.Data.SQLite
             command.ExecuteNonQuery();
         }
 
-        // Writes which items are worn: the equipped weapon and armor get 1, everything else 0.
+        // Writes which items are worn: everything equipped gets 1, everything else 0.
         public void SaveEquippedFlags(Hero hero)
         {
-            using var connection = _config.CreateConnection();
-            const string query = @"
-                UPDATE inventory_items
-                SET is_equipped = CASE WHEN item_id IN (@weaponId, @armorId) THEN 1 ELSE 0 END
-                WHERE character_id = @charId;";
+            List<int> wornIds = hero.Equipment.Worn.Select(item => item.ItemId).Where(id => id > 0).ToList();
 
-            using var command = new SqliteCommand(query, connection);
-            command.Parameters.AddWithValue("@weaponId", hero.Equipment.EquippedWeapon?.ItemId ?? -1);
-            command.Parameters.AddWithValue("@armorId", hero.Equipment.EquippedArmor?.ItemId ?? -1);
+            using var connection = _config.CreateConnection();
+            using var command = new SqliteCommand { Connection = connection };
+
+            // One parameter per worn item; with nothing worn the list is just -1, which matches no row.
+            var names = new List<string>();
+            for (int i = 0; i < wornIds.Count; i++)
+            {
+                names.Add($"@worn{i}");
+                command.Parameters.AddWithValue(names[i], wornIds[i]);
+            }
+
+            string inList = names.Count == 0 ? "-1" : string.Join(", ", names);
+            command.CommandText = $@"
+                UPDATE inventory_items
+                SET is_equipped = CASE WHEN item_id IN ({inList}) THEN 1 ELSE 0 END
+                WHERE character_id = @charId;";
             command.Parameters.AddWithValue("@charId", hero.CharacterId);
             command.ExecuteNonQuery();
         }

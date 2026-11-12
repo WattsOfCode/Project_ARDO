@@ -83,13 +83,20 @@ namespace ARDO.Core.Abstracts
         {
             string line = NextIntent switch
             {
-                EnemyIntent.Heavy => HitHero(hero, (int)Math.Round(RollAttackDamage() * HeavyMultiplier), HeavyAttackLine),
+                EnemyIntent.Heavy => HeavyBlow(hero),
                 EnemyIntent.Trick => UseTrick(hero),
                 _ => HitHero(hero, RollAttackDamage(), AttackLine)
             };
 
             NextIntent = PlanNextMove();
             return line;
+        }
+
+        private string HeavyBlow(Hero hero)
+        {
+            int damage = hero.BraceForHeavyBlow((int)Math.Round(RollAttackDamage() * HeavyMultiplier), out bool braced);
+            string line = HitHero(hero, damage, HeavyAttackLine);
+            return braced ? $"{line} Your shield takes the worst of it." : line;
         }
 
         protected virtual EnemyIntent PlanNextMove()

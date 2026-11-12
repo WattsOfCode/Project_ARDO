@@ -45,6 +45,8 @@ namespace ARDO.Core.Entities
             ItemEffect.Keen => "+10% crit",
             ItemEffect.Warded => "halves the first hit each fight",
             ItemEffect.RestoresMana => $"restores {StatModifier} mana",
+            ItemEffect.Bulwark => "halves the first heavy blow each fight",
+            ItemEffect.Swift => "+15% flee chance",
             _ => string.Empty
         };
 

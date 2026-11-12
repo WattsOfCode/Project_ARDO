@@ -79,15 +79,7 @@ namespace ARDO.UI.Display
             return labels;
         }
 
-        private static GameItem? EquippedIn(Hero hero, EquipmentSlot slot)
-        {
-            return slot switch
-            {
-                EquipmentSlot.Weapon => hero.Equipment.EquippedWeapon,
-                EquipmentSlot.Chest => hero.Equipment.EquippedArmor,
-                _ => null
-            };
-        }
+        private static GameItem? EquippedIn(Hero hero, EquipmentSlot slot) => hero.Equipment.ItemIn(slot);
 
         private static string[] BuildCanvas()
         {

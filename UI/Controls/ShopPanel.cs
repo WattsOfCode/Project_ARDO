@@ -232,11 +232,17 @@ namespace ARDO.UI.Controls
 
             AddOffer(45, () => new Weapon("Iron Blade", "A sturdy blade from the Oakhaven merchant.", RarityType.Common, 45, 10));
             AddOffer(35, () => new Armor("Reinforced Mail", "Armor fit for the next descent.", RarityType.Common, 35, 5, EquipmentSlot.Chest));
+            AddOffer(20, () => new Armor("Leather Cap", "Better than nothing between you and a falling rock.", RarityType.Common, 20, 2, EquipmentSlot.Helmet));
+            AddOffer(30, () => new Armor("Oak Buckler", "A round shield, iron at the rim.", RarityType.Common, 30, 3, EquipmentSlot.Shield));
+            AddOffer(20, () => new Armor("Traveler's Boots", "Broken in on the road to Oakhaven.", RarityType.Common, 20, 2, EquipmentSlot.Boots));
+            AddOffer(25, () => new Armor("Copper Ring", "A plain band the merchant swears is lucky.", RarityType.Common, 25, 1, EquipmentSlot.Ring));
 
             if (floor >= 2)
             {
                 AddOffer(110, () => new Weapon("Emberforged Sword", "Still warm from the depths' forges.", RarityType.Uncommon, 110, 16));
                 AddOffer(90, () => new Armor("Ashen Plate", "Plate scorched black in the Emberward.", RarityType.Uncommon, 90, 9, EquipmentSlot.Chest));
+                AddOffer(60, () => new Armor("Ashen Helm", "Soot still in the visor slits.", RarityType.Uncommon, 60, 4, EquipmentSlot.Helmet));
+                AddOffer(75, () => new Armor("Emberward Kite Shield", "Tall enough to hide behind.", RarityType.Uncommon, 75, 6, EquipmentSlot.Shield));
             }
 
             if (floor >= 3)
@@ -244,6 +250,9 @@ namespace ARDO.UI.Controls
                 AddOffer(55, ItemFactory.CreateGreaterHealthPotion);
                 AddOffer(180, () => new Weapon("Hallowed Greatblade", "Blessed in the Hollow Cathedral, before the fall.", RarityType.Rare, 180, 22, ItemEffect.Keen));
                 AddOffer(160, () => new Armor("Cathedral Ward", "Vestments that turn the first blow aside.", RarityType.Rare, 160, 13, EquipmentSlot.Chest, ItemEffect.Warded));
+                AddOffer(170, () => new Armor("Cathedral Bulwark", "A tower shield from the cathedral gates.", RarityType.Rare, 170, 8, EquipmentSlot.Shield, ItemEffect.Bulwark));
+                AddOffer(140, () => new Armor("Pilgrim's Striders", "Boots for those who know when to leave.", RarityType.Rare, 140, 5, EquipmentSlot.Boots, ItemEffect.Swift));
+                AddOffer(150, () => new Armor("Signet of the Keen", "The seal of a dead order of duelists.", RarityType.Rare, 150, 3, EquipmentSlot.Ring, ItemEffect.Keen));
             }
         }
 

@@ -21,7 +21,7 @@ namespace ARDO.Core.Abstracts
 {
     public abstract class Hero : ICombatant
     {
-        public const int FleeChancePercent = 60;
+        public const int BaseFleeChancePercent = 60;
         public const int BaseCritChancePercent = 10;
         public const int MissChancePercent = 5;
 
@@ -56,8 +56,13 @@ namespace ARDO.Core.Abstracts
         public int WeaponDamage => Equipment.DamageBonus + RunAttackBonus;
         public int Defense => GuardDefense + Equipment.DefenseBonus;
 
-        public int CritChancePercent =>
-            BaseCritChancePercent + (Equipment.EquippedWeapon?.Effect == ItemEffect.Keen ? 10 : 0);
+        // A keen weapon and a keen ring each add 10%.
+        public int CritChancePercent => BaseCritChancePercent + Equipment.CountEffect(ItemEffect.Keen) * 10;
+
+        public int FleeChancePercent => BaseFleeChancePercent + (Equipment.HasEffect(ItemEffect.Swift) ? 15 : 0);
+
+        // Set at the start of a fight when a Bulwark shield is worn; the first heavy blow uses it up.
+        public bool BulwarkReady { get; set; }
 
         public bool IsAlive => CurrentHealth > 0;
         public bool IsDead => !IsAlive;
@@ -170,9 +175,18 @@ namespace ARDO.Core.Abstracts
             InvulnerabilityCharges = 0;
         }
 
+        // Halves a heavy blow if the shield is still ready. Returns the damage to apply.
+        public int BraceForHeavyBlow(int damage, out bool braced)
+        {
+            braced = BulwarkReady;
+            BulwarkReady = false;
+            return braced ? damage / 2 : damage;
+        }
+
         public void ClearCombatEffects()
         {
             ClearGuard();
+            BulwarkReady = false;
             Burn.Clear();
         }
 
