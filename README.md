@@ -45,6 +45,10 @@ This repository currently reflects the Phase 3 release of the project, including
 - Every level-up offers three perks to choose from, drawn from shared perks and the hero's own class
   (Cleave, Pyromancer, Barbed Arrows, Shadow Dance and more). Type `perks` to see the ones you hold;
   heroes from older saves get one to choose for every level they had already earned
+- Every floor ends at its guardian, each with a fight of its own: Grisk, the Goblin King calls in lackeys who
+  scatter when he falls; the Cinder Matron is healed by fire and looses a Firestorm every third turn; the Raven Witch
+  drinks from every wound, turns blows aside with her parasol, and calls down her ravens when badly hurt.
+  The first kill of each leaves an Epic trophy, and a hero can turn back before the fight, leaving the floor uncleared
 
 ## Screen Recording
 
@@ -91,7 +95,7 @@ When loading a save, choosing `0` returns the player to the main menu.
 - Polymorphic combat system built around the `ICombatant` interface
 - Abstract hero and enemy class hierarchies
 - Playable hero classes: `Warrior`, `Mage`, `Archer` and `Rogue`
-- Multiple enemy types with boss encounters
+- Multiple enemy types with boss encounters and a named guardian on every floor
 - Inventory and equipment management
 - Weapon, armor, and consumable item systems
 - Quest-driven story progression

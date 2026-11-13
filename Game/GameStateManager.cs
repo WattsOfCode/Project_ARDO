@@ -44,6 +44,10 @@ namespace ARDO.Game
         private bool _afterRoom;
         private DungeonEvent? _pendingEvent;
 
+        // Each run ends at the floor's guardian, once the regular fights are done.
+        private bool _guardianFaced;
+        private bool _fightingGuardian;
+
         // The quest whose story has been told this session, so a return to town doesn't retell it.
         private int _introShownForQuest;
         private bool _choosingFloor;
@@ -58,6 +62,9 @@ namespace ARDO.Game
         private const int KeyEventChancePercent = 60;
 
         public GameState CurrentState { get; private set; } = GameState.Town;
+
+        // The event on screen, if any, by its title.
+        public string? ActiveEventTitle => _activeEvent?.Title;
 
         public GameStateManager(MainGameForm ui, Hero hero, IPlayerRepository playerRepo, QuestRepository questRepo)
         {
@@ -124,6 +131,8 @@ namespace ARDO.Game
             _inAmbush = false;
             _afterRoom = false;
             _pendingEvent = null;
+            _guardianFaced = false;
+            _fightingGuardian = false;
             _activeEvent = null;
             _choosingFloor = false;
             _perkPickInTown = false;
@@ -446,6 +455,13 @@ namespace ARDO.Game
                 return;
             }
 
+            if (!_onSidePassage && !_guardianFaced && _hero.ActiveStoryNode < EncounterTable.FinalQuestId)
+            {
+                _guardianFaced = true;
+                BeginEvent(GuardianEvents.Approach(_hero.ActiveStoryNode));
+                return;
+            }
+
             // A finished hero may find this floor's key of the wheel once the fights are done.
             if (!_onSidePassage && !_keyOfferedThisRun && _hero.StoryComplete && ThroneStillSealed
                 && _hero.ActiveStoryNode < EncounterTable.FinalQuestId && !_hero.HasWheelKey(_hero.ActiveStoryNode))
@@ -482,6 +498,12 @@ namespace ARDO.Game
                 GiveItem(LootGenerator.RollGear(floor, RarityType.Rare), "The guardian leaves something behind:");
             }
 
+            if (_fightingGuardian)
+            {
+                _fightingGuardian = false;
+                RewardGuardianKill(floor);
+            }
+
             if (_onSidePassage)
             {
                 _hero.Gold += _combatEngine.LastGoldEarned;
@@ -501,6 +523,18 @@ namespace ARDO.Game
 
             _playerRepo.SaveGameState(_hero);
             _ui.UpdateVisualMetricsDisplay();
+        }
+
+        // The first time a hero beats a floor's guardian, it leaves a trophy worth having.
+        private void RewardGuardianKill(int floor)
+        {
+            Say("");
+            Say("The guardian falls, and the floor goes quiet in a way it has not been for a long time.", MessageTone.Gold);
+            if (_hero.HasSlainGuardian(floor))
+                return;
+
+            _hero.GuardiansSlain |= 1 << (floor - 1);
+            GiveItem(LootGenerator.RollGear(floor + 1, RarityType.Epic), "A trophy of the first kill:");
         }
 
         // Adds an item to the pack (if there is room), saves it, and wears it if it's an upgrade.
@@ -617,6 +651,11 @@ namespace ARDO.Game
             else if (outcome.GoHome)
             {
                 EnterTown();
+            }
+            else if (outcome.Guardian != null)
+            {
+                _fightingGuardian = true;
+                EnterCombat(new[] { outcome.Guardian });
             }
             else if (outcome.ReturnToTown)
             {
@@ -873,6 +912,8 @@ namespace ARDO.Game
             _inAmbush = false;
             _afterRoom = false;
             _pendingEvent = null;
+            _guardianFaced = false;
+            _fightingGuardian = false;
 
             Say("");
             Say(quest != null

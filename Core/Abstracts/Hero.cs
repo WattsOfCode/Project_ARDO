@@ -46,6 +46,11 @@ namespace ARDO.Core.Abstracts
 
         public const int AllWheelKeys = 0b111;
 
+        // Floor guardians this hero has beaten at least once (one bit per floor, 1 to 3).
+        public int GuardiansSlain { get; set; }
+
+        public bool HasSlainGuardian(int floor) => (GuardiansSlain & (1 << (floor - 1))) != 0;
+
         public bool HasWheelKey(int floor) => (WheelKeys & (1 << (floor - 1))) != 0;
         public int WheelKeyCount => (WheelKeys & 1) + ((WheelKeys >> 1) & 1) + ((WheelKeys >> 2) & 1);
         public bool HasAllWheelKeys => (WheelKeys & AllWheelKeys) == AllWheelKeys;

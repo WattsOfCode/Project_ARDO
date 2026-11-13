@@ -197,6 +197,7 @@ namespace ARDO.Game.Combat
         private void FinishRound()
         {
             WriteAnnouncements();
+            GatherSummons();
 
             if (_isFinalBossEncounter)
             {
@@ -237,6 +238,7 @@ namespace ARDO.Game.Combat
                 }
             }
 
+            GatherSummons();
             _player.ClearGuard();
             if (_player is Mage flowing && flowing.HasPerk(PerkId.ManaFlow) && flowing.IsAlive)
             {
@@ -257,6 +259,19 @@ namespace ARDO.Game.Combat
             UpdateBattlefieldDisplay();
         }
 
+        // Enemies called in by others (a king's lackeys, the risen dead) join the fight.
+        private void GatherSummons()
+        {
+            foreach (Enemy caller in _enemies.ToList())
+            {
+                foreach (Enemy called in caller.TakeSummons())
+                {
+                    called.CombatFloor = _player.ActiveStoryNode;
+                    _enemies.Add(called);
+                }
+            }
+        }
+
         private void TickBurns()
         {
             if (_player.IsAlive && _player.Burn.IsActive)
@@ -267,6 +282,15 @@ namespace ARDO.Game.Combat
 
             foreach (Enemy enemy in _enemies.Where(enemy => enemy.IsAlive && enemy.Burn.IsActive))
             {
+                if (enemy.FeedsOnFire)
+                {
+                    int fed = enemy.Burn.Tick();
+                    int before = enemy.CurrentHealth;
+                    enemy.CurrentHealth = Math.Min(enemy.MaxHealth, enemy.CurrentHealth + fed);
+                    Say($"The flames only feed {enemy.Name}: +{enemy.CurrentHealth - before} HP.", MessageTone.Warning);
+                    continue;
+                }
+
                 int burned = enemy.Burn.Tick();
                 enemy.TakeDamage(burned);
                 Say(enemy.IsAlive
@@ -360,6 +384,11 @@ namespace ARDO.Game.Combat
                 if (enemy.Poison.IsActive)
                 {
                     status += "  poisoned";
+                }
+
+                if (enemy.StatusNote is string note)
+                {
+                    status += "  " + note;
                 }
 
                 Say(status, ReferenceEquals(enemy, target) ? MessageTone.Command : MessageTone.Normal);

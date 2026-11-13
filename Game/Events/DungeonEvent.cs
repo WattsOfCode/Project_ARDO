@@ -56,6 +56,9 @@ namespace ARDO.Game.Events
         public bool FightNow { get; set; }
         public bool RoomInsteadOfFight { get; set; }
 
+        // The floor's guardian, when the hero chooses to face it.
+        public Enemy? Guardian { get; set; }
+
         public EventOutcome Say(string text, MessageTone tone = MessageTone.Normal)
         {
             Lines.Add((text, tone));

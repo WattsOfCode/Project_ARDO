@@ -10,6 +10,7 @@
     own tricks, art, and attack text.
  */
 using System;
+using System.Collections.Generic;
 using ARDO.Core.Entities;
 using ARDO.Core.Enums;
 using ARDO.Core.Interfaces;
@@ -21,6 +22,9 @@ namespace ARDO.Core.Abstracts
         protected const int MissChancePercent = 8;
 
         private string? _announcement;
+
+        // Enemies called into the fight by this one, waiting for the combat engine to add them.
+        private readonly List<Enemy> _summons = new();
 
         public string Name { get; set; }
         public int CurrentHealth { get; set; }
@@ -56,6 +60,12 @@ namespace ARDO.Core.Abstracts
         protected virtual double HeavyMultiplier => 2.0;
 
         protected virtual int TrickChancePercent => 0;
+
+        // A short note after the health bar, like "warded (40)" or "heat 2/3".
+        public virtual string? StatusNote => null;
+
+        // A burn on this enemy heals it instead of hurting it.
+        public virtual bool FeedsOnFire => false;
 
         public bool IsAlive => CurrentHealth > 0;
         public bool IsDead => !IsAlive;
@@ -109,7 +119,26 @@ namespace ARDO.Core.Abstracts
         {
             int damage = hero.BraceForHeavyBlow((int)Math.Round(RollAttackDamage() * HeavyMultiplier), out bool braced);
             string line = HitHero(hero, damage, HeavyAttackLine);
-            return braced ? $"{line} Your shield takes the worst of it." : line;
+            if (braced)
+                line += " Your shield takes the worst of it.";
+
+            string after = AfterHeavyBlow(hero);
+            return after.Length > 0 ? $"{line} {after}" : line;
+        }
+
+        // Something extra a heavy blow does once it lands (a guardian's burn, say). Returns the text for it.
+        protected virtual string AfterHeavyBlow(Hero hero) => string.Empty;
+
+        // Whether this enemy's last hit actually reached the hero (not a miss, not a dodge).
+        protected bool LastHitLanded { get; private set; }
+
+        protected void Summon(Enemy enemy) => _summons.Add(enemy);
+
+        public List<Enemy> TakeSummons()
+        {
+            var called = new List<Enemy>(_summons);
+            _summons.Clear();
+            return called;
         }
 
         protected virtual EnemyIntent PlanNextMove()
@@ -134,6 +163,7 @@ namespace ARDO.Core.Abstracts
         protected string HitHero(Hero hero, int damage, string action)
         {
             hero.LastHitEvaded = false;
+            LastHitLanded = false;
             if (Random.Shared.Next(100) < MissChancePercent)
             {
                 return $"{Name} {action} It misses.";
@@ -145,6 +175,8 @@ namespace ARDO.Core.Abstracts
 
             if (hero.LastHitEvaded)
                 return $"{Name} {action} You slip aside and it finds only air.";
+
+            LastHitLanded = true;
 
             return dealt > 0
                 ? $"{Name} {action} It deals {dealt} damage."
