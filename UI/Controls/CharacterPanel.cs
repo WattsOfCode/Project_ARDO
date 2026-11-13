@@ -142,7 +142,9 @@ namespace ARDO.UI.Controls
 
             using Graphics g = _asciiDisplay.CreateGraphics();
 
-            while (fontSize > 4f)
+            // Portraits read as tone, not letters, so the font shrinks as far as it takes to show the whole picture.
+            int textWidth = 0;
+            while (fontSize > 0.5f)
             {
                 using Font testFont =
                     new Font("Consolas", fontSize);
@@ -152,6 +154,7 @@ namespace ARDO.UI.Controls
                         g,
                         new string('W', longestLength),
                         testFont);
+                textWidth = textSize.Width;
 
                 // Tall portraits have to fit the height too, now the stats panel sits below.
                 if (textSize.Width < _asciiDisplay.ClientSize.Width - 20 &&
@@ -160,11 +163,16 @@ namespace ARDO.UI.Controls
                     break;
                 }
 
-                fontSize -= 0.5f;
+                fontSize -= fontSize > 3f ? 0.25f : 0.1f;
             }
 
             _asciiDisplay.Font =
                 new Font("Consolas", fontSize);
+
+            // Center the picture in the panel.
+            _asciiDisplay.SelectAll();
+            _asciiDisplay.SelectionIndent = Math.Max(0, (_asciiDisplay.ClientSize.Width - textWidth) / 2);
+            _asciiDisplay.Select(0, 0);
         }
 
         partial void InitializeComponent();

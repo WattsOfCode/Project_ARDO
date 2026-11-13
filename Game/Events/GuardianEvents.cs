@@ -33,13 +33,13 @@ namespace ARDO.Game.Events
                 1 => new[]
                 {
                     "The tunnel opens into a cave hung with stolen banners. On a throne of crates sits a goblin " +
-                    "with a cooking pot for a crown, and he is delighted to see you.",
+                    "in a hood and a mantle of white fur strung with skulls. A blade burns green in one hand, a skull in the other, and he is delighted to see you.",
                     "He calls his lackeys to him when he can. They will not stay once he falls."
                 },
                 2 => new[]
                 {
-                    "The heat reaches you before the light does. In a chamber of black glass, a woman made of coals " +
-                    "rises from the furnace floor and smiles with a mouth full of sparks.",
+                    "The heat reaches you before the light does. In a field of ash and burnt trees, something horned and " +
+                    "four-armed rises from the coals, fire running in the cracks of her stone skin, and grins with a mouth full of flame.",
                     "Fire only feeds her. Every third breath, she lets loose a Firestorm."
                 },
                 _ => new[]

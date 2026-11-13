@@ -30,9 +30,9 @@ namespace ARDO.Game.Enemies
         }
 
         public override string ArtKey => "grisk";
-        public override string AttackLine => "swings a notched royal cleaver.";
-        public override string HeavyAttackLine => "brings the royal cleaver down with both hands.";
-        public override string WindUpWarning => $"{Name} hoists his cleaver high over his pot-lid crown!";
+        public override string AttackLine => "slashes with a curved blade wreathed in green fire.";
+        public override string HeavyAttackLine => "brings the burning blade down with both hands, grinning all the while.";
+        public override string WindUpWarning => $"{Name} raises his green-burning blade high over his hood!";
         protected override int HeavyChancePercent => 20;
         protected override int TrickChancePercent => 35;
         protected override double HeavyMultiplier => 1.8;
@@ -48,7 +48,7 @@ namespace ARDO.Game.Enemies
                 var lackey = new Goblin { Name = "Goblin Lackey", XpReward = 5, GoldReward = 0 };
                 _court.Add(lackey);
                 Summon(lackey);
-                return $"{Name} bangs on his crown and bellows \"GET 'IM!\" A Goblin Lackey scrambles out of the dark.";
+                return $"{Name} lifts the burning skull and shrieks \"GET 'IM!\" A Goblin Lackey scrambles out of the dark.";
             }
 
             int taxed = Math.Min(hero.Gold, 8 + CombatFloor * 2);
@@ -57,7 +57,7 @@ namespace ARDO.Game.Enemies
 
             hero.Gold -= taxed;
             GoldReward += taxed;
-            return $"{Name} points his cleaver at your pouch. \"Royal tax!\" A lackey's quick hands take {taxed} gold.";
+            return $"{Name} points his blade at your pouch. \"Royal tax!\" A lackey's quick hands take {taxed} gold.";
         }
 
         public override void TakeDamage(int amount)

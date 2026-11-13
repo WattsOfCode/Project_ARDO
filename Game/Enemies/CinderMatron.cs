@@ -25,9 +25,9 @@ namespace ARDO.Game.Enemies
         }
 
         public override string ArtKey => "cindermatron";
-        public override string AttackLine => "rakes at you with fingers of live coal.";
+        public override string AttackLine => "rakes at you with four clawed hands of cracked, burning stone.";
         public override string HeavyAttackLine => "opens her arms, and the Firestorm pours out of her.";
-        public override string WindUpWarning => $"{Name} draws the furnace into her arms. A Firestorm is coming!";
+        public override string WindUpWarning => $"{Name} spreads all four arms and the fire in her cracks blazes white. A Firestorm is coming!";
         protected override double HeavyMultiplier => 2.0;
 
         public override bool FeedsOnFire => true;
