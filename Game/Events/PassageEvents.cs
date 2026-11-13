@@ -187,7 +187,7 @@ namespace ARDO.Game.Events
             }
 
             int floor = Math.Max(1, hero.ActiveStoryNode);
-            int gold = Random.Shared.Next(15, 31) + floor * 10;
+            int gold = hero.WithGoldBonus(Random.Shared.Next(15, 31) + floor * 10);
             hero.Gold += gold;
             outcome.Say($"Coins spill out under your hands: +{gold} gold.", MessageTone.Gold);
             outcome.Reward = LootGenerator.RollGear(floor, RarityType.Uncommon);

@@ -11,6 +11,7 @@
  */
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using ARDO.Core.Abstracts;
 using ARDO.Core.Entities;
 using ARDO.Core.Enums;
@@ -19,6 +20,7 @@ using ARDO.Data.SQLite;
 using ARDO.Game.Combat;
 using ARDO.Game.Events;
 using ARDO.Game.Inventory;
+using ARDO.Game.Progression;
 using ARDO.UI.Controls;
 using ARDO.UI.Forms;
 
@@ -45,6 +47,9 @@ namespace ARDO.Game
         // The quest whose story has been told this session, so a return to town doesn't retell it.
         private int _introShownForQuest;
         private bool _choosingFloor;
+
+        // Perks earned before reaching town (or by an old save) are chosen there, then the town menu follows.
+        private bool _perkPickInTown;
 
         // After the story: which throne fight is on (if any), and whether this run already offered its hidden key.
         private WheelEnding _throneFight;
@@ -121,6 +126,7 @@ namespace ARDO.Game
             _pendingEvent = null;
             _activeEvent = null;
             _choosingFloor = false;
+            _perkPickInTown = false;
             _throneFight = WheelEnding.None;
             _keyOfferedThisRun = false;
             _hero.EndDungeonRun();
@@ -140,7 +146,7 @@ namespace ARDO.Game
             if (_hero.StoryComplete)
             {
                 ShowFinishedHeroTown();
-                ShowTownMenu();
+                ShowTownMenuOrPerks();
                 return;
             }
 
@@ -174,7 +180,42 @@ namespace ARDO.Game
                 Say($"[{npc.Value.Role}] {npc.Value.Name}: \"{npc.Value.Dialogue}\"", MessageTone.Dim);
             }
 
+            ShowTownMenuOrPerks();
+        }
+
+        // A hero with perks still to choose picks them before the town menu comes up.
+        private void ShowTownMenuOrPerks()
+        {
+            if (_hero.PendingPerkPicks > 0)
+            {
+                _perkPickInTown = true;
+                BeginEvent(PerkEvents.Choose(_hero));
+                return;
+            }
+
             ShowTownMenu();
+        }
+
+        private void ShowPerks()
+        {
+            Say("");
+            Say("--- PERKS ---", MessageTone.Header);
+            if (_hero.Perks.Count == 0)
+            {
+                Say("No perks yet. Every level-up offers three to choose from.", MessageTone.Dim);
+            }
+
+            foreach (IGrouping<PerkId, PerkId> taken in _hero.Perks.GroupBy(perk => perk))
+            {
+                PerkInfo info = PerkCatalog.Get(taken.Key);
+                string times = taken.Count() > 1 ? $" x{taken.Count()}" : string.Empty;
+                Say($"{info.Name}{times}: {info.Description}");
+            }
+
+            if (_hero.PendingPerkPicks > 0)
+            {
+                Say(_hero.PendingPerkPicks == 1 ? "1 perk still to choose." : $"{_hero.PendingPerkPicks} perks still to choose.", MessageTone.Gold);
+            }
         }
 
         public void EnterCombat(IReadOnlyList<Enemy> enemies)
@@ -215,6 +256,12 @@ namespace ARDO.Game
             if (IsGearCommand(normalized))
             {
                 OpenGear();
+                return;
+            }
+
+            if (normalized is "perks" or "perk")
+            {
+                ShowPerks();
                 return;
             }
 
@@ -372,6 +419,12 @@ namespace ARDO.Game
         // What comes after a won fight or a finished event.
         private void ContinueDungeonRun()
         {
+            if (_hero.PendingPerkPicks > 0)
+            {
+                BeginEvent(PerkEvents.Choose(_hero));
+                return;
+            }
+
             if (_pendingEvent != null)
             {
                 DungeonEvent next = _pendingEvent;
@@ -539,6 +592,20 @@ namespace ARDO.Game
             _playerRepo.SaveGameState(_hero);
             _ui.UpdateVisualMetricsDisplay();
 
+            if (_perkPickInTown)
+            {
+                if (_hero.PendingPerkPicks > 0)
+                {
+                    BeginEvent(PerkEvents.Choose(_hero));
+                    return;
+                }
+
+                _perkPickInTown = false;
+                CurrentState = GameState.Town;
+                ShowTownMenu();
+                return;
+            }
+
             if (outcome.ThroneFight != WheelEnding.None)
             {
                 _throneFight = outcome.ThroneFight;
@@ -600,7 +667,7 @@ namespace ARDO.Game
         // The town description only on arrival; after that, just the choices.
         private void ShowTownMenu(bool arriving = true)
         {
-            _ui.SetCommandContext("Town: 1 shop, 2 rest at inn (10g), 3 enter dungeon, 4 save, 5 main menu, i / g pack and gear.");
+            _ui.SetCommandContext("Town: 1 shop, 2 rest at inn (10g), 3 enter dungeon, 4 save, 5 main menu, i / g pack and gear, perks.");
             Say("");
             if (arriving)
             {

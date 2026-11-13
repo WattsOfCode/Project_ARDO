@@ -99,6 +99,14 @@ namespace ARDO.Data.SQLite
                     hero.StoryComplete = Convert.ToInt32(reader["story_complete"]) == 1;
                     hero.WheelKeys = Convert.ToInt32(reader["wheel_keys"]);
                     hero.WheelEnding = (WheelEnding)Convert.ToInt32(reader["wheel_ending"]);
+                    hero.PendingPerkPicks = Convert.ToInt32(reader["pending_perks"]);
+
+                    // Perks are saved by name, comma-separated; a name this build doesn't know is skipped.
+                    foreach (string perkName in (reader["perks"]?.ToString() ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries))
+                    {
+                        if (Enum.TryParse(perkName.Trim(), out PerkId perk))
+                            hero.Perks.Add(perk);
+                    }
 
                     if (hero is Mage mage)
                     {
@@ -123,7 +131,8 @@ namespace ARDO.Data.SQLite
                 UPDATE characters
                 SET level = @level, experience = @xp, current_health = @currentHp, max_health = @maxHp,
                     current_mana = @currentMana, max_mana = @maxMana, gold = @gold, active_story_node = @storyNode,
-                    story_complete = @storyComplete, wheel_keys = @wheelKeys, wheel_ending = @wheelEnding
+                    story_complete = @storyComplete, wheel_keys = @wheelKeys, wheel_ending = @wheelEnding,
+                    perks = @perks, pending_perks = @pendingPerks
                 WHERE character_id = @charId;";
 
             using var command = new SqliteCommand(query, connection);
@@ -138,6 +147,8 @@ namespace ARDO.Data.SQLite
             command.Parameters.AddWithValue("@storyComplete", character.StoryComplete ? 1 : 0);
             command.Parameters.AddWithValue("@wheelKeys", character.WheelKeys);
             command.Parameters.AddWithValue("@wheelEnding", (int)character.WheelEnding);
+            command.Parameters.AddWithValue("@perks", string.Join(",", character.Perks));
+            command.Parameters.AddWithValue("@pendingPerks", character.PendingPerkPicks);
             command.Parameters.AddWithValue("@charId", character.CharacterId);
 
             command.ExecuteNonQuery();

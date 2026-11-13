@@ -13,6 +13,7 @@ using System;
 using System.Collections.Generic;
 using ARDO.Core.Abstracts;
 using ARDO.Core.Entities;
+using ARDO.Core.Enums;
 
 namespace ARDO.Game.Players
 {
@@ -28,7 +29,9 @@ namespace ARDO.Game.Players
 
         public int AimedShotDamage => 27 + Level + WeaponDamage + SpecialAttackBonus;
 
-        public int VolleyDamage => Math.Max(1, (14 + Level + WeaponDamage + SpecialAttackBonus) * 2 / 3);
+        public int VolleyDamage => Math.Max(1, (14 + Level + WeaponDamage + SpecialAttackBonus) * 2 / 3 * (HasPerk(PerkId.Barrage) ? 7 : 5) / 5);
+
+        public int BleedPerTurn => 3 + Level / 2;
 
         public int PinningShotDamage => 8 + Level + SpecialAttackBonus;
 
@@ -38,7 +41,9 @@ namespace ARDO.Game.Players
             {
                 ("Aimed Shot", "Attack", $"Take your time and loose one true arrow. Deals {AimedShotDamage} dmg and never misses."),
                 ("Volley", "Attack", $"Rain arrows on every standing foe for {VolleyDamage} dmg each."),
-                ("Pinning Shot", "Defense", $"Pin the target for {PinningShotDamage} dmg and break any heavy blow it is winding up.")
+                ("Pinning Shot", "Defense", HasPerk(PerkId.BarbedArrows)
+                    ? $"Pin the target for {PinningShotDamage} dmg, break any heavy blow, and leave it bleeding {BleedPerTurn} a round."
+                    : $"Pin the target for {PinningShotDamage} dmg and break any heavy blow it is winding up.")
             };
         }
 
@@ -51,7 +56,7 @@ namespace ARDO.Game.Players
 
         public string AimedShot(Enemy target)
         {
-            HitResult hit = Strike(target, AimedShotDamage, canMiss: false);
+            HitResult hit = Strike(target, AimedShotDamage, canMiss: false, extraCritChance: HasPerk(PerkId.SteadyAim) ? 25 : 0);
             return Narrate(hit, $"{Name} draws, holds, and looses an Aimed Shot into {target.Name} for {hit.Damage} damage.", string.Empty);
         }
 
@@ -75,6 +80,12 @@ namespace ARDO.Game.Players
         {
             HitResult hit = Strike(target, PinningShotDamage, canMiss: false);
             string line = $"{Name} pins {target.Name} with a quick shot for {hit.Damage} damage.";
+            if (HasPerk(PerkId.BarbedArrows) && target.IsAlive)
+            {
+                target.Poison.Apply(3, BleedPerTurn);
+                line += $" The barbs stay in: it bleeds {BleedPerTurn} a round.";
+            }
+
             return target.IsAlive && target.Interrupt()
                 ? $"{line} Its heavy blow is broken before it can fall."
                 : line;

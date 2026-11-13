@@ -42,6 +42,9 @@ This repository currently reflects the Phase 3 release of the project, including
 - Between fights the passage forks left and right, each way with a hint of what lies down it. Most lead to the
   next fight; some to an event, or to a door. Behind a door is a treasure chest (sometimes trapped, sometimes
   guarded) or an empty room to catch your breath. A rogue can pick a chest's lock and skip the trap
+- Every level-up offers three perks to choose from, drawn from shared perks and the hero's own class
+  (Cleave, Pyromancer, Barbed Arrows, Shadow Dance and more). Type `perks` to see the ones you hold;
+  heroes from older saves get one to choose for every level they had already earned
 
 ## Screen Recording
 
@@ -92,6 +95,7 @@ When loading a save, choosing `0` returns the player to the main menu.
 - Inventory and equipment management
 - Weapon, armor, and consumable item systems
 - Quest-driven story progression
+- Level-up perks that shape each hero's build
 - SQLite save/load support with repository-based data access
 
 ## Extended Features

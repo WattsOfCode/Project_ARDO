@@ -12,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using ARDO.Core.Abstracts;
 using ARDO.Core.Entities;
+using ARDO.Core.Enums;
 
 namespace ARDO.Game.Players
 {
@@ -45,9 +46,9 @@ namespace ARDO.Game.Players
         {
             return new List<(string, string, string)>
             {
-                ("Firebolt", "Attack", $"Launch a blazing projectile. Deals {FireboltDamage} magic dmg. (Cost: {FireboltCost} Mana)"),
-                ("Lightning Cascade", "Attack", $"Shock the target for {LightningMinRoll + LightningBonus} to {LightningMaxRoll + LightningBonus} dmg; arcs to the others for half. (Cost: {LightningCascadeCost} Mana)"),
-                ("Arcane Ward", "Defense", $"Raise a shield: +3 defense and the next hit is halved. (Cost: {ArcaneWardCost} Mana)")
+                ("Firebolt", "Attack", $"Launch a blazing projectile. Deals {FireboltDamage} magic dmg{(HasPerk(PerkId.Pyromancer) ? " and sets it burning" : "")}. (Cost: {CostOf(1)} Mana)"),
+                ("Lightning Cascade", "Attack", $"Shock the target for {LightningMinRoll + LightningBonus} to {LightningMaxRoll + LightningBonus} dmg; arcs to the others for {(HasPerk(PerkId.Overcharge) ? "three quarters" : "half")}. (Cost: {CostOf(2)} Mana)"),
+                ("Arcane Ward", "Defense", $"Raise a shield: +3 defense and the next hit is halved{(HasPerk(PerkId.MirrorWard) ? ", and heal a tenth of your HP" : "")}. (Cost: {CostOf(3)} Mana)")
             };
         }
 
@@ -62,6 +63,12 @@ namespace ARDO.Game.Players
                 _ => 0
             };
         }
+
+        // What a move costs this mage, after Efficient Casting.
+        public int CostOf(int moveNumber) =>
+            Math.Max(0, ManaCostFor(moveNumber) - (HasPerk(PerkId.EfficientCasting) ? 5 : 0));
+
+        public int BurnPerTurn => 4 + Level / 2;
 
         protected override void OnLevelUp()
         {
@@ -78,32 +85,37 @@ namespace ARDO.Game.Players
 
         public string CastFirebolt(Enemy target)
         {
-            if (CurrentMana < FireboltCost)
+            if (CurrentMana < CostOf(1))
             {
                 return $"{Name} tries to cast Firebolt but lacks mana.";
             }
 
-            CurrentMana -= FireboltCost;
+            CurrentMana -= CostOf(1);
             HitResult hit = Strike(target, FireboltDamage, canMiss: false);
-            return Narrate(hit,
-                $"{Name} hurls Firebolt at {target.Name} for {hit.Damage} damage. Mana {CurrentMana}/{MaxMana}.",
-                string.Empty);
+            string line = Narrate(hit, $"{Name} hurls Firebolt at {target.Name} for {hit.Damage} damage.", string.Empty);
+            if (HasPerk(PerkId.Pyromancer) && target.IsAlive)
+            {
+                target.Burn.Apply(3, BurnPerTurn);
+                line += $" {target.Name} catches fire.";
+            }
+
+            return line + $" Mana {CurrentMana}/{MaxMana}.";
         }
 
         // Hits the target, then arcs to every other standing enemy for half damage.
         public string CastLightningCascade(Enemy target, IEnumerable<Enemy> otherEnemies)
         {
-            if (CurrentMana < LightningCascadeCost)
+            if (CurrentMana < CostOf(2))
             {
                 return $"{Name} tries to call Lightning Cascade but lacks mana.";
             }
 
-            CurrentMana -= LightningCascadeCost;
+            CurrentMana -= CostOf(2);
             int roll = Random.Shared.Next(LightningMinRoll, LightningMaxRoll + 1) + LightningBonus;
             HitResult hit = Strike(target, roll, canMiss: false);
             string line = Narrate(hit, $"{Name} unleashes Lightning Cascade on {target.Name} for {hit.Damage} damage.", string.Empty);
 
-            int arcDamage = Math.Max(1, roll / 2);
+            int arcDamage = Math.Max(1, HasPerk(PerkId.Overcharge) ? roll * 3 / 4 : roll / 2);
             var arcedTo = new List<string>();
             foreach (Enemy other in otherEnemies)
             {
@@ -124,15 +136,23 @@ namespace ARDO.Game.Players
 
         public string CastArcaneWard()
         {
-            if (CurrentMana < ArcaneWardCost)
+            if (CurrentMana < CostOf(3))
             {
                 return $"{Name} tries to raise Arcane Ward but lacks mana.";
             }
 
-            CurrentMana -= ArcaneWardCost;
+            CurrentMana -= CostOf(3);
             GuardDefense += 3;
             InvulnerabilityCharges += 1;
-            return $"{Name} weaves Arcane Ward. Defense rises and the next strike will be halved. Mana {CurrentMana}/{MaxMana}.";
+            string mirror = string.Empty;
+            if (HasPerk(PerkId.MirrorWard))
+            {
+                int healed = Heal(MaxHealth / 10);
+                if (healed > 0)
+                    mirror = $" The ward gives back {healed} HP.";
+            }
+
+            return $"{Name} weaves Arcane Ward. Defense rises and the next strike will be halved.{mirror} Mana {CurrentMana}/{MaxMana}.";
         }
     }
 }

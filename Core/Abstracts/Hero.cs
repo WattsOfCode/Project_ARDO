@@ -72,6 +72,22 @@ namespace ARDO.Core.Abstracts
 
         public BurnEffect Burn { get; } = new();
 
+        // Perks taken on level-ups (Toughness can appear more than once), and level-ups not yet spent on one.
+        public List<PerkId> Perks { get; } = new();
+        public int PendingPerkPicks { get; set; }
+
+        public bool HasPerk(PerkId perk) => Perks.Contains(perk);
+
+        // Shadow Dance: set by a dodge, spent on the next attack that lands.
+        public bool NextAttackCrits { get; set; }
+
+        // Last Stand: once a fight. Triggered stays set until the combat log has said so.
+        public bool LastStandUsed { get; set; }
+        public bool LastStandTriggered { get; set; }
+
+        public int WithXpBonus(int xp) => HasPerk(PerkId.QuickStudy) ? xp * 6 / 5 : xp;
+        public int WithGoldBonus(int gold) => HasPerk(PerkId.Scavenger) ? gold * 5 / 4 : gold;
+
         // The last attack this hero made, so the combat log can color crits and misses.
         public HitResult LastHit { get; private set; }
 
@@ -80,17 +96,20 @@ namespace ARDO.Core.Abstracts
         public int SpecialAttackBonus => Math.Max(0, (Level - 1) / 3) * 2;
 
         public int WeaponDamage => Equipment.DamageBonus + RunAttackBonus;
-        public int Defense => GuardDefense + Equipment.DefenseBonus;
+        public int Defense => GuardDefense + Equipment.DefenseBonus + (HasPerk(PerkId.IronSkin) ? 2 : 0);
 
         // A keen weapon and a keen ring each add 10%.
-        public int CritChancePercent => BaseCritChancePercent + ClassCritBonus + Equipment.CountEffect(ItemEffect.Keen) * 10;
+        public int CritChancePercent => BaseCritChancePercent + ClassCritBonus + Equipment.CountEffect(ItemEffect.Keen) * 10
+                                        + (HasPerk(PerkId.KeenEye) ? 5 : 0);
 
-        public int FleeChancePercent => BaseFleeChancePercent + ClassFleeBonus + (Equipment.HasEffect(ItemEffect.Swift) ? 15 : 0);
+        public int FleeChancePercent => BaseFleeChancePercent + ClassFleeBonus + (Equipment.HasEffect(ItemEffect.Swift) ? 15 : 0)
+                                        + (HasPerk(PerkId.FleetFooted) ? 15 : 0);
 
         // Class leanings: archers crit more, rogues slip away more often and sometimes dodge outright.
         protected virtual int ClassCritBonus => 0;
         protected virtual int ClassFleeBonus => 0;
-        public virtual int DodgeChancePercent => 0;
+        protected virtual int ClassDodgeBonus => 0;
+        public int DodgeChancePercent => ClassDodgeBonus + (HasPerk(PerkId.Evasive) ? 8 : 0);
 
         // Set at the start of a fight when a Bulwark shield is worn; the first heavy blow uses it up.
         public bool BulwarkReady { get; set; }
@@ -122,7 +141,7 @@ namespace ARDO.Core.Abstracts
         }
 
         // Every hero attack goes through here: miss and crit rolls, then the weapon's effect.
-        public HitResult Strike(Enemy target, int baseDamage, bool canMiss)
+        public HitResult Strike(Enemy target, int baseDamage, bool canMiss, int extraCritChance = 0)
         {
             if (canMiss && Random.Shared.Next(100) < MissChancePercent)
             {
@@ -130,8 +149,16 @@ namespace ARDO.Core.Abstracts
                 return LastHit;
             }
 
-            bool critical = Random.Shared.Next(100) < CritChancePercent;
-            int damage = critical ? (int)Math.Round(baseDamage * 1.5) : baseDamage;
+            bool critical = NextAttackCrits || Random.Shared.Next(100) < CritChancePercent + extraCritChance;
+            NextAttackCrits = false;
+
+            if (HasPerk(PerkId.Executioner) && target.CurrentHealth * 3 < target.MaxHealth)
+            {
+                baseDamage = baseDamage * 13 / 10;
+            }
+
+            double critMultiplier = HasPerk(PerkId.BrutalCrits) ? 2.0 : 1.5;
+            int damage = critical ? (int)Math.Round(baseDamage * critMultiplier) : baseDamage;
             target.TakeDamage(damage);
 
             string notes = string.Empty;
@@ -177,6 +204,8 @@ namespace ARDO.Core.Abstracts
             {
                 EvadeNext = false;
                 LastHitEvaded = true;
+                if (HasPerk(PerkId.ShadowDance))
+                    NextAttackCrits = true;
                 return;
             }
 
@@ -188,6 +217,14 @@ namespace ARDO.Core.Abstracts
             else
             {
                 damage = Math.Max(1, damage - Defense);
+            }
+
+            if (damage >= CurrentHealth && CurrentHealth > 0 && HasPerk(PerkId.LastStand) && !LastStandUsed)
+            {
+                LastStandUsed = true;
+                LastStandTriggered = true;
+                CurrentHealth = 1;
+                return;
             }
 
             CurrentHealth = Math.Max(0, CurrentHealth - damage);
@@ -228,6 +265,9 @@ namespace ARDO.Core.Abstracts
             ClearGuard();
             BulwarkReady = false;
             Burn.Clear();
+            NextAttackCrits = false;
+            LastStandUsed = false;
+            LastStandTriggered = false;
         }
 
         public void EndDungeonRun()
@@ -255,10 +295,12 @@ namespace ARDO.Core.Abstracts
             return leveledUp;
         }
 
+        // Every level-up also earns a perk, chosen when the fight is over.
         protected virtual void OnLevelUp()
         {
             MaxHealth += 10;
             CurrentHealth = MaxHealth;
+            PendingPerkPicks++;
         }
 
         // Full recovery at the inn or after being revived.

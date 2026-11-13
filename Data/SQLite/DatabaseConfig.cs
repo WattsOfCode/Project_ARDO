@@ -108,6 +108,13 @@ namespace ARDO.Data.SQLite
                 EnsureColumnExists(connection, transaction, "characters", "story_complete", "INTEGER NOT NULL DEFAULT 0");
                 EnsureColumnExists(connection, transaction, "characters", "wheel_keys", "INTEGER NOT NULL DEFAULT 0");
                 EnsureColumnExists(connection, transaction, "characters", "wheel_ending", "INTEGER NOT NULL DEFAULT 0");
+                EnsureColumnExists(connection, transaction, "characters", "perks", "TEXT NOT NULL DEFAULT ''");
+
+                // Heroes from before perks get one to choose for every level they already earned.
+                if (EnsureColumnExists(connection, transaction, "characters", "pending_perks", "INTEGER NOT NULL DEFAULT 0"))
+                {
+                    Execute(connection, transaction, "UPDATE characters SET pending_perks = MAX(0, level - 1);");
+                }
 
                 // Enemy stats live in the enemy classes; this table from older versions was never read.
                 Execute(connection, transaction, "DROP TABLE IF EXISTS enemy_templates;");
@@ -157,6 +164,8 @@ namespace ARDO.Data.SQLite
                         story_complete INTEGER NOT NULL DEFAULT 0,
                         wheel_keys INTEGER NOT NULL DEFAULT 0,
                         wheel_ending INTEGER NOT NULL DEFAULT 0,
+                        perks TEXT NOT NULL DEFAULT '',
+                        pending_perks INTEGER NOT NULL DEFAULT 0,
                         FOREIGN KEY (active_story_node) REFERENCES quest_templates(quest_id)
                     );";
 
@@ -176,7 +185,7 @@ namespace ARDO.Data.SQLite
             }
 
             const string columns = "character_id, name, class_type, level, experience, current_health, max_health, " +
-                                   "current_mana, max_mana, gold, active_story_node, story_complete, wheel_keys, wheel_ending";
+                                   "current_mana, max_mana, gold, active_story_node, story_complete, wheel_keys, wheel_ending, perks, pending_perks";
 
             using (var pragma = connection.CreateCommand())
             {
@@ -242,7 +251,8 @@ namespace ARDO.Data.SQLite
             command.ExecuteNonQuery();
         }
 
-        private static void EnsureColumnExists(SqliteConnection conn, SqliteTransaction trans, string tableName, string columnName, string columnDefinition)
+        // Returns true when the column was missing and has just been added.
+        private static bool EnsureColumnExists(SqliteConnection conn, SqliteTransaction trans, string tableName, string columnName, string columnDefinition)
         {
             var columns = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -261,10 +271,11 @@ namespace ARDO.Data.SQLite
                 }
             }
 
-            if (!columns.Contains(columnName))
-            {
-                Execute(conn, trans, $"ALTER TABLE {tableName} ADD COLUMN {columnName} {columnDefinition};");
-            }
+            if (columns.Contains(columnName))
+                return false;
+
+            Execute(conn, trans, $"ALTER TABLE {tableName} ADD COLUMN {columnName} {columnDefinition};");
+            return true;
         }
     }
 }

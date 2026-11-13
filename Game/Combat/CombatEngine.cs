@@ -46,6 +46,8 @@ namespace ARDO.Game.Combat
         private int _targetIndex;
         private int _round;
         private bool _movesListed;
+        // Quick Draw: the first special attack of the fight sets no cooldown.
+        private bool _quickDrawReady;
 
         private enum PlayerActionOutcome
         {
@@ -100,6 +102,7 @@ namespace ARDO.Game.Combat
             _targetIndex = 0;
             _round = 1;
             _movesListed = false;
+            _quickDrawReady = _player.HasPerk(PerkId.QuickDraw);
             LastActionWasFleeSuccessful = false;
             LastGoldEarned = 0;
             GuardiansDefeated = 0;
@@ -222,6 +225,12 @@ namespace ARDO.Game.Combat
 
                 Say(line, tone);
 
+                if (_player.LastStandTriggered)
+                {
+                    _player.LastStandTriggered = false;
+                    Say("That should have killed you. You refuse to fall. (Last Stand: 1 HP)", MessageTone.Gold);
+                }
+
                 if (!_player.IsAlive)
                 {
                     break;
@@ -229,6 +238,11 @@ namespace ARDO.Game.Combat
             }
 
             _player.ClearGuard();
+            if (_player is Mage flowing && flowing.HasPerk(PerkId.ManaFlow) && flowing.IsAlive)
+            {
+                flowing.CurrentMana = Math.Min(flowing.MaxMana, flowing.CurrentMana + 6);
+            }
+
             TickBurns();
             WriteAnnouncements();
             TickSpecialCooldown();
@@ -408,6 +422,13 @@ namespace ARDO.Game.Combat
                 case "strike":
                     HitResult hit = _player.Strike(target, _player.BasicAttackDamage, canMiss: true);
                     Say(DescribePlayerBasicAttack(target, hit), ToneFor(hit));
+                    if (!hit.Missed && _player.HasPerk(PerkId.Cutpurse))
+                    {
+                        int lifted = Random.Shared.Next(3, 7);
+                        _player.Gold += lifted;
+                        Say($"Your other hand comes away with {lifted} gold.", MessageTone.Gold);
+                    }
+
                     return PlayerActionOutcome.TurnSpent;
 
                 case "2":
@@ -517,9 +538,9 @@ namespace ARDO.Game.Combat
                 return false;
             }
 
-            if (_player is Mage mage && mage.CurrentMana < Mage.ManaCostFor(selection))
+            if (_player is Mage mage && mage.CurrentMana < mage.CostOf(selection))
             {
-                Say($"Not enough mana for {moves[selection - 1].MoveName}: it needs {Mage.ManaCostFor(selection)}, you have {mage.CurrentMana}.", MessageTone.Dim);
+                Say($"Not enough mana for {moves[selection - 1].MoveName}: it needs {mage.CostOf(selection)}, you have {mage.CurrentMana}.", MessageTone.Dim);
                 Say("Choose another move, or 0 to cancel.", MessageTone.Dim);
                 return false;
             }
@@ -543,7 +564,7 @@ namespace ARDO.Game.Combat
                 case Warrior warrior:
                     line = selection switch
                     {
-                        1 => warrior.SwordStrike(target),
+                        1 => warrior.SwordStrike(target, _enemies),
                         2 => warrior.ShieldBash(target),
                         _ => warrior.DefensiveGuard()
                     };
@@ -572,7 +593,12 @@ namespace ARDO.Game.Combat
                     break;
             }
 
-            if (isAttack)
+            if (isAttack && _quickDrawReady)
+            {
+                _quickDrawReady = false;
+                line += " Quick Draw: your next special is ready at once.";
+            }
+            else if (isAttack)
             {
                 _specialCooldownTurnsRemaining = SpecialCooldownTurns;
             }
@@ -618,8 +644,8 @@ namespace ARDO.Game.Combat
                 Say("");
                 Say($"Victory. You defeated {Plural(_enemies.Count, "enemy", "enemies")}.", MessageTone.Gold);
 
-                int totalXp = _enemies.Sum(enemy => enemy.XpReward);
-                int totalGold = _enemies.Sum(enemy => enemy.GoldReward);
+                int totalXp = _player.WithXpBonus(_enemies.Sum(enemy => enemy.XpReward));
+                int totalGold = _player.WithGoldBonus(_enemies.Sum(enemy => enemy.GoldReward));
                 bool leveledUp = _player.GainExperience(totalXp);
 
                 _player.Gold += totalGold;
@@ -629,7 +655,13 @@ namespace ARDO.Game.Combat
                 Say($"Rewards earned: +{totalXp} XP | +{totalGold} gold.", MessageTone.Gold);
                 if (leveledUp)
                 {
-                    Say($"A surge of power raises you to level {_player.Level}.", MessageTone.Gold);
+                    Say($"A surge of power raises you to level {_player.Level}. A new perk waits to be chosen.", MessageTone.Gold);
+                }
+                else if (_player.HasPerk(PerkId.SecondWind))
+                {
+                    int recovered = _player.Heal(_player.MaxHealth / 10);
+                    if (recovered > 0)
+                        Say($"Second Wind: you recover {recovered} HP.", MessageTone.Heal);
                 }
 
                 _playerRepo.SaveGameState(_player);
