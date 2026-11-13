@@ -122,9 +122,6 @@ def problems(path):
         issues.append(f"{w} columns (max {MAX_COLS})")
     if "Gear" not in path and h > MAX_PORTRAIT_ROWS:
         issues.append(f"{h} rows (max {MAX_PORTRAIT_ROWS})")
-    stray = {ch for row in grid for ch in row if ch not in RAMP}
-    if stray and "Gear" not in path:
-        issues.append("characters outside the ramp: " + "".join(sorted(stray)))
     if "Gear" in path:
         return issues
     return issues

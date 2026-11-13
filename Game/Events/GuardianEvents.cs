@@ -44,8 +44,8 @@ namespace ARDO.Game.Events
                 },
                 _ => new[]
                 {
-                    "In the nave of the Hollow Cathedral, a woman in white lace waits under a pale parasol, " +
-                    "though no sun has reached this place in a thousand years. Ravens line the rafters, watching.",
+                    "On the cathedral roof, under a full moon and a forest of broken spires, a pale woman in a black gown waits, " +
+                    "white hair stirring though there is no wind. A furled black parasol hangs at her side. Ravens line the spires, watching.",
                     "Every wound she gives, she drinks. Her open parasol turns aside the next blow. Hurt her badly and the ravens come down."
                 }
             };

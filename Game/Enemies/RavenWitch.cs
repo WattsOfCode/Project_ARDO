@@ -5,7 +5,7 @@
  *
  * Class description:
  * `RavenWitch.cs` is the guardian of the Hollow Cathedral: something like a
-    vampire, in white lace under a pale parasol. She drinks back half of every
+    vampire, pale, in a black gown, with a black parasol. She drinks back half of every
     wound she gives, her open parasol turns aside the next blow completely, and
     once she is badly hurt her ravens come down from the rafters. They scatter
     when she falls.
@@ -64,7 +64,7 @@ namespace ARDO.Game.Enemies
                 return HitHero(hero, RollAttackDamage(), AttackLine);
 
             ParasolOpen = true;
-            return $"{Name} snaps her pale parasol open. The next blow will glance off it.";
+            return $"{Name} snaps her black parasol open. The next blow will glance off it.";
         }
 
         public override void TakeDamage(int amount)

@@ -18,7 +18,7 @@ namespace ARDO.UI.Controls
 {
     public partial class CharacterPanel : UserControl
     {
-        private RichTextBox _asciiDisplay = null!;
+        private AsciiArtView _asciiDisplay = null!;
         private Label _characterName = null!;
 
         private string _rawAsciiArt = string.Empty;
@@ -51,34 +51,14 @@ namespace ARDO.UI.Controls
                 Font = new Font("Consolas", 12, FontStyle.Bold)
             };
 
-            _asciiDisplay = new RichTextBox
-            {
-                Dock = DockStyle.Fill,
-
-                ReadOnly = true,
-
-                BorderStyle = BorderStyle.None,
-
-                BackColor = Color.Black,
-                ForeColor = Color.LightGreen,
-
-                Font = new Font("Consolas", 10),
-
-                ScrollBars = RichTextBoxScrollBars.None,
-
-                WordWrap = false,
-
-                DetectUrls = false,
-
-                TabStop = false
-            };
+            // Fits any size of picture: as text when it can be read, scaled as a picture when it is very detailed.
+            _asciiDisplay = new AsciiArtView();
 
             Controls.Clear();
 
             Controls.Add(_asciiDisplay);
             Controls.Add(_characterName);
 
-            Resize += (s, e) => FitFontToScreen();
         }
 
         public void UpdateCharacterName(string name)
@@ -90,9 +70,7 @@ namespace ARDO.UI.Controls
         {
             _rawAsciiArt = AsciiArtLoader.LoadArt(category, fileName);
 
-            _asciiDisplay.Text = _rawAsciiArt;
-
-            FitFontToScreen();
+            _asciiDisplay.SetArt(_rawAsciiArt);
         }
 
         public void ShowPlayer(Hero hero)
@@ -116,63 +94,6 @@ namespace ARDO.UI.Controls
             _characterName.Text = name;
 
             UpdateAsciiArt("Enemies", enemyFile);
-        }
-
-        private void FitFontToScreen()
-        {
-            if (string.IsNullOrWhiteSpace(_rawAsciiArt))
-                return;
-
-            if (_asciiDisplay.ClientSize.Width <= 0)
-                return;
-
-            string[] lines = _rawAsciiArt.Split('\n');
-
-            int longestLength = 0;
-
-            foreach (string line in lines)
-            {
-                if (line.Length > longestLength)
-                {
-                    longestLength = line.Length;
-                }
-            }
-
-            float fontSize = 12f;
-
-            using Graphics g = _asciiDisplay.CreateGraphics();
-
-            // Portraits read as tone, not letters, so the font shrinks as far as it takes to show the whole picture.
-            int textWidth = 0;
-            while (fontSize > 0.5f)
-            {
-                using Font testFont =
-                    new Font("Consolas", fontSize);
-
-                Size textSize =
-                    TextRenderer.MeasureText(
-                        g,
-                        new string('W', longestLength),
-                        testFont);
-                textWidth = textSize.Width;
-
-                // Tall portraits have to fit the height too, now the stats panel sits below.
-                if (textSize.Width < _asciiDisplay.ClientSize.Width - 20 &&
-                    testFont.Height * lines.Length <= _asciiDisplay.ClientSize.Height)
-                {
-                    break;
-                }
-
-                fontSize -= fontSize > 3f ? 0.25f : 0.1f;
-            }
-
-            _asciiDisplay.Font =
-                new Font("Consolas", fontSize);
-
-            // Center the picture in the panel.
-            _asciiDisplay.SelectAll();
-            _asciiDisplay.SelectionIndent = Math.Max(0, (_asciiDisplay.ClientSize.Width - textWidth) / 2);
-            _asciiDisplay.Select(0, 0);
         }
 
         partial void InitializeComponent();

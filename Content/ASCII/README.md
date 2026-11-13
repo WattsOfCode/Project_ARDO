@@ -5,12 +5,15 @@ Every picture in this folder follows the same rules, so the game looks like one 
 ## The rules
 
 - **Bright is dense.** The game draws light green on black, so `@` is the brightest cell and a space is black.
-  Use the ramp ` .:-=+*#%@` (dark to bright) and nothing else in portraits.
-- **Supplied art is used as given.** Art the designer provides (like `Enemies/grisk.txt` and
-  `Enemies/cindermatron.txt`) goes in exactly as sent, background and all, unless they ask for it to be cut out
-  (as `Enemies/ravenwitch.txt` was).
-- **Any size.** The portrait panel shrinks the font until the whole picture fits and centers it, so a detailed
-  250 by 205 picture shows in full. Up to 300 columns and 260 rows.
+  Art made here uses the ramp ` .:-=+*#%@` (dark to bright); supplied art may bring its own (like ` .:;+xX$&`).
+- **Supplied art is used as given.** Art the designer provides (like `Enemies/grisk.txt`, `Enemies/cindermatron.txt`,
+  `Enemies/ravenwitch.txt`) goes in exactly as sent, background and all, unless they ask for it to be cut out.
+- **Class portraits are busts.** `Heroes/` pictures show the hero from the waist up, cut out from their background
+  (the supplied characters kept exactly, everything around the figure blank), so the four cards on the creation
+  screen stand about the same height. All four were made this way from supplied art.
+- **Any size.** Pictures are centered and fitted to the panel. Small ones are drawn as text at the largest font
+  that fits; detailed ones (like 250 by 205) are drawn at a normal size and the picture is scaled down, so they keep
+  their true shape. Up to 300 columns and 260 rows.
 - **Drawn from a real picture.** A portrait starts from a drawing or painting turned into ASCII, not from
   shapes drawn in code.
 - **Art made here** (not supplied) has a blank background: everything around the figure is spaces, with no
