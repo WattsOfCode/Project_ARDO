@@ -97,13 +97,7 @@ namespace ARDO.UI.Controls
 
         public void ShowPlayer(Hero hero)
         {
-            if (hero is Mage)
-            {
-                ShowPlayer(hero.Name, "mage");
-                return;
-            }
-
-            ShowPlayer(hero.Name, "warrior");
+            ShowPlayer(hero.Name, hero.ArtKey);
         }
 
         public void ShowPlayer(string name)

@@ -46,6 +46,10 @@ namespace ARDO.Game.Events
         public bool ReturnToTown { get; set; }
         public bool PressOn { get; set; }
 
+        // At the sealed throne: which fight lies beyond the door, or just walk back up to town.
+        public WheelEnding ThroneFight { get; set; }
+        public bool GoHome { get; set; }
+
         public EventOutcome Say(string text, MessageTone tone = MessageTone.Normal)
         {
             Lines.Add((text, tone));

@@ -27,6 +27,9 @@ namespace ARDO.Game.Enemies
         protected override string UseTrick(Hero hero)
         {
             string line = HitHero(hero, RollAttackDamage() / 2, "spits a gout of clinging fire.");
+            if (hero.LastHitEvaded)
+                return line;
+
             hero.Burn.Apply(3, 3 + CombatFloor);
             return line + $" You are burning! ({hero.Burn.DamagePerTurn} a round for {hero.Burn.TurnsLeft} rounds)";
         }

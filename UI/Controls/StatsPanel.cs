@@ -74,6 +74,9 @@ namespace ARDO.UI.Controls
                 ? "none"
                 : $"+{hero.Equipment.DefenseBonus} DEF\n          {pieces} of {EquipmentManager.ArmorSlots.Length} slots filled";
             string blessing = hero.RunAttackBonus != 0 ? $"\nBlessing  {hero.RunAttackBonus:+#;-#} ATK this run" : string.Empty;
+            string keys = hero.StoryComplete && hero.WheelEnding == ARDO.Core.Enums.WheelEnding.None
+                ? $"\nKeys      {hero.WheelKeyCount} of 3"
+                : string.Empty;
 
             _rawText =
 $@"================================
@@ -86,7 +89,7 @@ XP      {TextBar.Render(hero.Experience, hero.ExperienceToNextLevel)} {hero.Expe
 Weapon    {weaponLine}
 Armor     {armorLine}{blessing}
 
-Gold      {hero.Gold}
+Gold      {hero.Gold}{keys}
 
 ================================";
             _scrollToEnd = false;

@@ -39,10 +39,33 @@ namespace ARDO.Core.Abstracts
         // True once the hero has reached the epilogue; their story is over.
         public bool StoryComplete { get; set; }
 
+        // After the story: the keys of the wheel found so far (one bit per floor, 1 to 3),
+        // and which way the hero finally ended it.
+        public int WheelKeys { get; set; }
+        public WheelEnding WheelEnding { get; set; }
+
+        public const int AllWheelKeys = 0b111;
+
+        public bool HasWheelKey(int floor) => (WheelKeys & (1 << (floor - 1))) != 0;
+        public int WheelKeyCount => (WheelKeys & 1) + ((WheelKeys >> 1) & 1) + ((WheelKeys >> 2) & 1);
+        public bool HasAllWheelKeys => (WheelKeys & AllWheelKeys) == AllWheelKeys;
+
+        // The class name as saved and shown ("Warrior", "Archer"...), and its picture in Content/ASCII/Heroes.
+        public string ClassName => GetType().Name;
+        public virtual string ArtKey => ClassName.ToLowerInvariant();
+
+        // Whoever can pick the sealed door at the throne.
+        public virtual bool CanPickLocks => false;
+
         // Defense from guard moves (Defensive Guard, Shield Bash, Arcane Ward). Lasts until the enemies' turn ends.
         public int GuardDefense { get; set; }
         // Each charge halves the next hit taken (and lets it drop to 0). Also cleared after the enemies' turn.
         public int InvulnerabilityCharges { get; set; }
+        // Smoke Step and the like: the next hit misses completely. Also cleared after the enemies' turn.
+        public bool EvadeNext { get; set; }
+
+        // Set when the last hit was dodged, so the enemy's log line can say so.
+        public bool LastHitEvaded { get; set; }
 
         // Shrine blessings and the like: extra attack until the hero is back in town.
         public int RunAttackBonus { get; set; }
@@ -60,9 +83,14 @@ namespace ARDO.Core.Abstracts
         public int Defense => GuardDefense + Equipment.DefenseBonus;
 
         // A keen weapon and a keen ring each add 10%.
-        public int CritChancePercent => BaseCritChancePercent + Equipment.CountEffect(ItemEffect.Keen) * 10;
+        public int CritChancePercent => BaseCritChancePercent + ClassCritBonus + Equipment.CountEffect(ItemEffect.Keen) * 10;
 
-        public int FleeChancePercent => BaseFleeChancePercent + (Equipment.HasEffect(ItemEffect.Swift) ? 15 : 0);
+        public int FleeChancePercent => BaseFleeChancePercent + ClassFleeBonus + (Equipment.HasEffect(ItemEffect.Swift) ? 15 : 0);
+
+        // Class leanings: archers crit more, rogues slip away more often and sometimes dodge outright.
+        protected virtual int ClassCritBonus => 0;
+        protected virtual int ClassFleeBonus => 0;
+        public virtual int DodgeChancePercent => 0;
 
         // Set at the start of a fight when a Bulwark shield is worn; the first heavy blow uses it up.
         public bool BulwarkReady { get; set; }
@@ -139,8 +167,16 @@ namespace ARDO.Core.Abstracts
 
         public virtual void TakeDamage(int damage)
         {
+            LastHitEvaded = false;
             if (damage <= 0)
             {
+                return;
+            }
+
+            if (EvadeNext || (DodgeChancePercent > 0 && Random.Shared.Next(100) < DodgeChancePercent))
+            {
+                EvadeNext = false;
+                LastHitEvaded = true;
                 return;
             }
 
@@ -176,6 +212,7 @@ namespace ARDO.Core.Abstracts
         {
             GuardDefense = 0;
             InvulnerabilityCharges = 0;
+            EvadeNext = false;
         }
 
         // Halves a heavy blow if the shield is still ready. Returns the damage to apply.

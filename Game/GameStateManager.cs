@@ -44,6 +44,12 @@ namespace ARDO.Game
         private int _introShownForQuest;
         private bool _choosingFloor;
 
+        // After the story: which throne fight is on (if any), and whether this run already offered its hidden key.
+        private WheelEnding _throneFight;
+        private bool _keyOfferedThisRun;
+        private bool _keyRumorShown;
+        private const int KeyEventChancePercent = 60;
+
         public GameState CurrentState { get; private set; } = GameState.Town;
 
         public GameStateManager(MainGameForm ui, Hero hero, IPlayerRepository playerRepo, QuestRepository questRepo)
@@ -79,6 +85,16 @@ namespace ARDO.Game
                 Say("The Maw below Oakhaven has opened again. You must descend into the primordial dark, " +
                     "butcher the guardians of the twisted timeline, and challenge Alhuezo, the God-King who turned our growth into a slow, living decay.");
             }
+            else if (_hero.WheelEnding == WheelEnding.TurnedTheWheel)
+            {
+                Say("The wheel turns forward now, and Oakhaven grows older the way it was always meant to.");
+                Say("The dungeon below never quite empties. The upper floors still stir.");
+            }
+            else if (_hero.WheelEnding == WheelEnding.SteppedOff)
+            {
+                Say("You stepped off the wheel, and every morning you wake a little older. You like it.");
+                Say("The dungeon below never quite empties. The upper floors still stir.");
+            }
             else if (_hero.StoryComplete)
             {
                 Say("You fell before Alhuezo's throne, yet Oakhaven wakes you once more.");
@@ -101,6 +117,8 @@ namespace ARDO.Game
             _inAmbush = false;
             _activeEvent = null;
             _choosingFloor = false;
+            _throneFight = WheelEnding.None;
+            _keyOfferedThisRun = false;
             _hero.EndDungeonRun();
 
             // A finished hero only borrows a floor for a run; in town they stand at the end of the story.
@@ -117,7 +135,7 @@ namespace ARDO.Game
 
             if (_hero.StoryComplete)
             {
-                Say("Your story is told. The throne is sealed, but floors 1 to 3 are still yours to walk.", MessageTone.Gold);
+                ShowFinishedHeroTown();
                 ShowTownMenu();
                 return;
             }
@@ -318,8 +336,33 @@ namespace ARDO.Game
                 return;
             }
 
+            if (_throneFight != WheelEnding.None)
+            {
+                PlayWheelEnding(_throneFight);
+                return;
+            }
+
             HandlePostCombatVictory();
             ContinueDungeonRun();
+        }
+
+        // The rematch or the shadow is won: the ending plays, it's saved, and the hero goes back to the start screen.
+        private void PlayWheelEnding(WheelEnding ending)
+        {
+            _throneFight = WheelEnding.None;
+            _hero.WheelEnding = ending;
+            _hero.RestoreForTown();
+            _playerRepo.SaveGameState(_hero);
+            _ui.UpdateVisualMetricsDisplay();
+
+            foreach ((string text, MessageTone tone) in WheelEndings.For(ending, _hero))
+            {
+                Say(text, tone);
+            }
+
+            CurrentState = GameState.GameOver;
+            _ui.SetCommandContext("Type anything and press Enter to return to the start screen.");
+            Say("The story is complete.", MessageTone.Dim);
         }
 
         // What comes after a won fight or a finished event.
@@ -335,6 +378,18 @@ namespace ARDO.Game
 
                 StartNextDungeonEncounter();
                 return;
+            }
+
+            // A finished hero may find this floor's key of the wheel once the fights are done.
+            if (!_onSidePassage && !_keyOfferedThisRun && _hero.StoryComplete && ThroneStillSealed
+                && _hero.ActiveStoryNode < EncounterTable.FinalQuestId && !_hero.HasWheelKey(_hero.ActiveStoryNode))
+            {
+                _keyOfferedThisRun = true;
+                if (Random.Shared.Next(100) < KeyEventChancePercent)
+                {
+                    BeginEvent(WheelEvents.KeyFor(_hero.ActiveStoryNode));
+                    return;
+                }
             }
 
             if (!_onSidePassage && _hero.ActiveStoryNode < EncounterTable.FinalQuestId)
@@ -469,7 +524,19 @@ namespace ARDO.Game
             _playerRepo.SaveGameState(_hero);
             _ui.UpdateVisualMetricsDisplay();
 
-            if (outcome.ReturnToTown)
+            if (outcome.ThroneFight != WheelEnding.None)
+            {
+                _throneFight = outcome.ThroneFight;
+                Enemy foe = _throneFight == WheelEnding.SteppedOff
+                    ? Game.Enemies.ShadowSelf.Of(_hero)
+                    : Game.Enemies.Alhuezo.Unbound(_hero);
+                EnterCombat(new[] { foe });
+            }
+            else if (outcome.GoHome)
+            {
+                EnterTown();
+            }
+            else if (outcome.ReturnToTown)
             {
                 CompleteDungeonRun();
             }
@@ -621,7 +688,7 @@ namespace ARDO.Game
         private void ShowFloorChoice()
         {
             _choosingFloor = true;
-            _ui.SetCommandContext("Pick a floor 1 to 3, or 0 to stay in town.");
+            _ui.SetCommandContext(FloorPrompt);
             Say("");
             Say("Which floor will you walk?");
             for (int floor = 1; floor < EncounterTable.FinalQuestId; floor++)
@@ -629,7 +696,52 @@ namespace ARDO.Game
                 QuestRepository.QuestSummary? quest = _questRepo.GetQuestSummary(floor);
                 Say($"{floor}. {quest?.Title ?? $"Floor {floor}"}");
             }
+
+            if (ThroneStillSealed)
+            {
+                Say($"{EncounterTable.FinalQuestId}. The Sealed Throne ({_hero.WheelKeyCount} of 3 keys)");
+            }
+
             Say("0. Stay in town", MessageTone.Dim);
+        }
+
+        // The throne door matters only until the hero has ended things one way or the other.
+        private bool ThroneStillSealed => _hero.WheelEnding == WheelEnding.None;
+
+        private string FloorPrompt => ThroneStillSealed
+            ? "Pick a floor 1 to 3, 4 for the sealed throne, or 0 to stay in town."
+            : "Pick a floor 1 to 3, or 0 to stay in town.";
+
+        private void ShowFinishedHeroTown()
+        {
+            switch (_hero.WheelEnding)
+            {
+                case WheelEnding.TurnedTheWheel:
+                    Say("You turned the wheel. Floors 1 to 3 are still yours to walk.", MessageTone.Gold);
+                    return;
+
+                case WheelEnding.SteppedOff:
+                    Say("You stepped off the wheel. Floors 1 to 3 are still yours to walk.", MessageTone.Gold);
+                    return;
+            }
+
+            Say("Your story is told. The throne is sealed, but floors 1 to 3 are still yours to walk.", MessageTone.Gold);
+            Say($"Keys of the wheel: {_hero.WheelKeyCount} of 3.", MessageTone.Dim);
+
+            // Maren points the way once a session.
+            if (_keyRumorShown)
+                return;
+
+            _keyRumorShown = true;
+            Say("");
+            string rumor = _hero.HasAllWheelKeys
+                ? "Three keys, and you found every one. Whatever that door is keeping, it is yours to open now."
+                : "They say three keys were hidden below, one on each floor, for whoever came back from the throne. Look where the dead keep things.";
+            Say($"[Inn Keeper] Maren: \"{rumor}\"", MessageTone.Dim);
+            if (_hero.CanPickLocks)
+            {
+                Say("[Inn Keeper] Maren: \"Then again, a door with three locks usually has a fourth, for the servants.\"", MessageTone.Dim);
+            }
         }
 
         private void ProcessFloorChoice(string command)
@@ -641,9 +753,18 @@ namespace ARDO.Game
                 return;
             }
 
+            if (command == $"{EncounterTable.FinalQuestId}" && ThroneStillSealed)
+            {
+                _choosingFloor = false;
+                Say("");
+                Say("You take the long stair down, past every floor you have already cleared.");
+                BeginEvent(WheelEvents.SealedDoor(_hero));
+                return;
+            }
+
             if (!int.TryParse(command, out int floor) || floor < 1 || floor >= EncounterTable.FinalQuestId)
             {
-                Say("Pick a floor 1 to 3, or 0 to stay in town.", MessageTone.Dim);
+                Say(FloorPrompt, MessageTone.Dim);
                 return;
             }
 

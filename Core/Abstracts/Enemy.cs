@@ -35,6 +35,9 @@ namespace ARDO.Core.Abstracts
 
         public BurnEffect Burn { get; } = new();
 
+        // A rogue's poison: ticks like a burn, but stacks its own way and reads differently in the log.
+        public BurnEffect Poison { get; } = new();
+
         // Guardians (the tougher named foes) always drop gear.
         public virtual bool IsGuardian => false;
 
@@ -92,6 +95,16 @@ namespace ARDO.Core.Abstracts
             return line;
         }
 
+        // A pinning shot or the like: a wound-up heavy blow is lost. Returns true if there was one.
+        public bool Interrupt()
+        {
+            if (NextIntent != EnemyIntent.Heavy)
+                return false;
+
+            NextIntent = EnemyIntent.Attack;
+            return true;
+        }
+
         private string HeavyBlow(Hero hero)
         {
             int damage = hero.BraceForHeavyBlow((int)Math.Round(RollAttackDamage() * HeavyMultiplier), out bool braced);
@@ -120,6 +133,7 @@ namespace ARDO.Core.Abstracts
 
         protected string HitHero(Hero hero, int damage, string action)
         {
+            hero.LastHitEvaded = false;
             if (Random.Shared.Next(100) < MissChancePercent)
             {
                 return $"{Name} {action} It misses.";
@@ -128,6 +142,9 @@ namespace ARDO.Core.Abstracts
             int before = hero.CurrentHealth;
             hero.TakeDamage(damage);
             int dealt = before - hero.CurrentHealth;
+
+            if (hero.LastHitEvaded)
+                return $"{Name} {action} You slip aside and it finds only air.";
 
             return dealt > 0
                 ? $"{Name} {action} It deals {dealt} damage."

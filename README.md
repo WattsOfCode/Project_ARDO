@@ -27,12 +27,18 @@ This repository currently reflects the Phase 3 release of the project, including
 ## Since Phase 3
 
 - Inventory and Gear screens, opened with `i` / `g` or the buttons in the bottom-right corner
-- Six gear slots (weapon, helmet, chest, shield, boots, ring) shown on an ASCII figure; mages hold a staff
-- The shop sells staffs to mages and blades to warriors, at the same price and power
-- A character creation screen with the two classes side by side; hero names are capped at 16 characters
+- Six gear slots (weapon, helmet, chest, shield, boots, ring) shown on an ASCII figure, holding each class's own weapon
+- Two new classes: the `Archer` (more crits, Aimed Shot, a Volley that hits every foe, and a Pinning Shot that
+  breaks a heavy blow) and the `Rogue` (dodges and flees more often, Backstab, Poison Blade, and Smoke Step)
+- The shop sells each class its own weapon (blade, staff, bow or daggers) at the same price and power
+- A character creation screen with the four classes side by side; hero names are capped at 16 characters
 - Click a menu option, list row, enemy or class card to fill in its command, then press Enter
 - Attack, Special, Flee and Item buttons during a fight, plus Esc, command history (Up / Down) and PageUp / PageDown
 - A hero who reaches the epilogue is marked on the load list as fallen to the God-King. They can still be loaded and pick floor 1, 2 or 3 from the dungeon, but the throne is sealed to them
+- After the epilogue, three keys of the wheel are hidden on floors 1 to 3. With all three, the sealed throne opens
+  for a rematch with Alhuezo that can be won, and the wheel turns forward. A rogue can instead pick the door's
+  servant lock and fight their own shadow for a second ending. The load list shows which ending each hero reached
+- Saves from earlier versions open with the new classes available; nothing in them is lost
 
 ## Screen Recording
 
@@ -78,7 +84,7 @@ When loading a save, choosing `0` returns the player to the main menu.
 - Windows Forms-based game shell for narrative, input, stats, and character display
 - Polymorphic combat system built around the `ICombatant` interface
 - Abstract hero and enemy class hierarchies
-- Playable hero classes: `Warrior` and `Mage`
+- Playable hero classes: `Warrior`, `Mage`, `Archer` and `Rogue`
 - Multiple enemy types with boss encounters
 - Inventory and equipment management
 - Weapon, armor, and consumable item systems

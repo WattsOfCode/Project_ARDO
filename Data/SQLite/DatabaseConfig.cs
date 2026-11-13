@@ -82,21 +82,7 @@ namespace ARDO.Data.SQLite
                         FOREIGN KEY (associated_quest_id) REFERENCES quest_templates(quest_id)
                     );");
 
-                Execute(connection, transaction, @"
-                    CREATE TABLE IF NOT EXISTS characters (
-                        character_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        name TEXT NOT NULL,
-                        class_type TEXT NOT NULL CHECK(class_type IN ('Warrior', 'Mage')),
-                        level INTEGER NOT NULL DEFAULT 1,
-                        experience INTEGER NOT NULL DEFAULT 0,
-                        current_health INTEGER NOT NULL,
-                        max_health INTEGER NOT NULL,
-                        current_mana INTEGER NOT NULL DEFAULT 0,
-                        max_mana INTEGER NOT NULL DEFAULT 0,
-                        gold INTEGER NOT NULL DEFAULT 100,
-                        active_story_node INTEGER NOT NULL DEFAULT 1,
-                        FOREIGN KEY (active_story_node) REFERENCES quest_templates(quest_id)
-                    );");
+                Execute(connection, transaction, CharactersTableSql("characters"));
 
                 Execute(connection, transaction, @"
                     CREATE TABLE IF NOT EXISTS inventory_items (
@@ -120,6 +106,8 @@ namespace ARDO.Data.SQLite
                 EnsureColumnExists(connection, transaction, "inventory_items", "equipment_slot", "TEXT NOT NULL DEFAULT 'None'");
                 EnsureColumnExists(connection, transaction, "inventory_items", "item_effect", "TEXT NOT NULL DEFAULT 'None'");
                 EnsureColumnExists(connection, transaction, "characters", "story_complete", "INTEGER NOT NULL DEFAULT 0");
+                EnsureColumnExists(connection, transaction, "characters", "wheel_keys", "INTEGER NOT NULL DEFAULT 0");
+                EnsureColumnExists(connection, transaction, "characters", "wheel_ending", "INTEGER NOT NULL DEFAULT 0");
 
                 // Enemy stats live in the enemy classes; this table from older versions was never read.
                 Execute(connection, transaction, "DROP TABLE IF EXISTS enemy_templates;");
@@ -147,6 +135,78 @@ namespace ARDO.Data.SQLite
                 transaction.Rollback();
                 Debug.WriteLine($"[ARDO][DB] Database initialization failed: {ex}");
                 throw;
+            }
+
+            AllowNewClasses();
+        }
+
+        // The class list lives in a CHECK on the characters table.
+        private static string CharactersTableSql(string tableName) => $@"
+                    CREATE TABLE IF NOT EXISTS {tableName} (
+                        character_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name TEXT NOT NULL,
+                        class_type TEXT NOT NULL CHECK(class_type IN ('Warrior', 'Mage', 'Archer', 'Rogue')),
+                        level INTEGER NOT NULL DEFAULT 1,
+                        experience INTEGER NOT NULL DEFAULT 0,
+                        current_health INTEGER NOT NULL,
+                        max_health INTEGER NOT NULL,
+                        current_mana INTEGER NOT NULL DEFAULT 0,
+                        max_mana INTEGER NOT NULL DEFAULT 0,
+                        gold INTEGER NOT NULL DEFAULT 100,
+                        active_story_node INTEGER NOT NULL DEFAULT 1,
+                        story_complete INTEGER NOT NULL DEFAULT 0,
+                        wheel_keys INTEGER NOT NULL DEFAULT 0,
+                        wheel_ending INTEGER NOT NULL DEFAULT 0,
+                        FOREIGN KEY (active_story_node) REFERENCES quest_templates(quest_id)
+                    );";
+
+        // Saves from before the Archer and Rogue only allow 'Warrior' and 'Mage'. SQLite can't
+        // change a CHECK in place, so the table is rebuilt once with every hero copied across.
+        // Foreign keys are off while it happens, so dropping the old table can't take the packs with it.
+        private void AllowNewClasses()
+        {
+            using var connection = CreateConnection();
+
+            using (var check = connection.CreateCommand())
+            {
+                check.CommandText = "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'characters';";
+                string sql = check.ExecuteScalar()?.ToString() ?? string.Empty;
+                if (sql.Contains("'Rogue'"))
+                    return;
+            }
+
+            const string columns = "character_id, name, class_type, level, experience, current_health, max_health, " +
+                                   "current_mana, max_mana, gold, active_story_node, story_complete, wheel_keys, wheel_ending";
+
+            using (var pragma = connection.CreateCommand())
+            {
+                pragma.CommandText = "PRAGMA foreign_keys = OFF;";
+                pragma.ExecuteNonQuery();
+            }
+
+            using (var transaction = connection.BeginTransaction())
+            {
+                try
+                {
+                    Execute(connection, transaction, "DROP TABLE IF EXISTS characters_rebuild;");
+                    Execute(connection, transaction, CharactersTableSql("characters_rebuild"));
+                    Execute(connection, transaction, $"INSERT INTO characters_rebuild ({columns}) SELECT {columns} FROM characters;");
+                    Execute(connection, transaction, "DROP TABLE characters;");
+                    Execute(connection, transaction, "ALTER TABLE characters_rebuild RENAME TO characters;");
+                    transaction.Commit();
+                }
+                catch (Exception ex)
+                {
+                    transaction.Rollback();
+                    Debug.WriteLine($"[ARDO][DB] Could not open the save to the new classes: {ex}");
+                    throw;
+                }
+            }
+
+            using (var pragma = connection.CreateCommand())
+            {
+                pragma.CommandText = "PRAGMA foreign_keys = ON;";
+                pragma.ExecuteNonQuery();
             }
         }
 

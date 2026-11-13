@@ -204,7 +204,7 @@ namespace ARDO.Game.Events
         }
 
         // Event damage never kills: it leaves the hero on at least 1 HP.
-        private static int LoseHealth(Hero hero, int amount)
+        internal static int LoseHealth(Hero hero, int amount)
         {
             int lost = Math.Min(Math.Max(1, amount), hero.CurrentHealth - 1);
             hero.CurrentHealth -= Math.Max(0, lost);

@@ -232,6 +232,8 @@ namespace ARDO.UI.Controls
             AddOffer(45, () => ClassWeapon(
                 ("Iron Blade", "A sturdy blade from the Oakhaven merchant."),
                 ("Ashwood Staff", "A plain staff, worn smooth by an apprentice's grip."),
+                ("Hunter's Shortbow", "Yew and gut string. It has fed a family or two."),
+                ("Twin Iron Daggers", "A matched pair, balanced for throwing or worse."),
                 RarityType.Common, 45, 10));
             AddOffer(35, () => new Armor("Reinforced Mail", "Armor fit for the next descent.", RarityType.Common, 35, 5, EquipmentSlot.Chest));
             AddOffer(20, () => new Armor("Leather Cap", "Better than nothing between you and a falling rock.", RarityType.Common, 20, 2, EquipmentSlot.Helmet));
@@ -244,6 +246,8 @@ namespace ARDO.UI.Controls
                 AddOffer(110, () => ClassWeapon(
                     ("Emberforged Sword", "Still warm from the depths' forges."),
                     ("Cinder Staff", "An ember burns in its crown and never goes out."),
+                    ("Emberstring Longbow", "The string glows faintly when drawn."),
+                    ("Cinder Fangs", "Two curved blades that never quite cool."),
                     RarityType.Uncommon, 110, 16));
                 AddOffer(90, () => new Armor("Ashen Plate", "Plate scorched black in the Emberward.", RarityType.Uncommon, 90, 9, EquipmentSlot.Chest));
                 AddOffer(60, () => new Armor("Ashen Helm", "Soot still in the visor slits.", RarityType.Uncommon, 60, 4, EquipmentSlot.Helmet));
@@ -256,6 +260,8 @@ namespace ARDO.UI.Controls
                 AddOffer(180, () => ClassWeapon(
                     ("Hallowed Greatblade", "Blessed in the Hollow Cathedral, before the fall."),
                     ("Hallowed Crozier", "A cathedral staff that still remembers its prayers."),
+                    ("Hallowed Warbow", "Cut from a cathedral rafter. Its arrows find the gaps."),
+                    ("Vesper Stilettos", "Thin as a prayer, and quieter."),
                     RarityType.Rare, 180, 22, ItemEffect.Keen));
                 AddOffer(160, () => new Armor("Cathedral Ward", "Vestments that turn the first blow aside.", RarityType.Rare, 160, 13, EquipmentSlot.Chest, ItemEffect.Warded));
                 AddOffer(170, () => new Armor("Cathedral Bulwark", "A tower shield from the cathedral gates.", RarityType.Rare, 170, 8, EquipmentSlot.Shield, ItemEffect.Bulwark));
@@ -264,13 +270,21 @@ namespace ARDO.UI.Controls
             }
         }
 
-        // Mages are offered a staff and everyone else a blade, at the same price and power.
+        // Each class is offered its own weapon (blade, staff, bow or daggers) at the same price and power.
         private Weapon ClassWeapon(
             (string Name, string Description) blade,
             (string Name, string Description) staff,
+            (string Name, string Description) bow,
+            (string Name, string Description) daggers,
             RarityType rarity, int value, int damage, ItemEffect effect = ItemEffect.None)
         {
-            (string name, string description) = _hero is Mage ? staff : blade;
+            (string name, string description) = _hero switch
+            {
+                Mage => staff,
+                Archer => bow,
+                Rogue => daggers,
+                _ => blade
+            };
             return new Weapon(name, description, rarity, value, damage, effect);
         }
 

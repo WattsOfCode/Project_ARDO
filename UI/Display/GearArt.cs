@@ -5,7 +5,7 @@
  *
  * Class description:
  * `GearArt.cs` holds the gear screen picture: the shield, the armored figure and
-    the hero's weapon (a sword, or a staff for a mage) stamped side by side onto
+    the hero's weapon (sword, staff, bow or dagger, by class) stamped side by side onto
     one character grid, plus where each equipment slot's label belongs and what
     it says for the current hero.
  */
@@ -48,8 +48,14 @@ namespace ARDO.UI.Display
 
         private static readonly Dictionary<string, string[]> Canvases = new();
 
-        // Mages carry a staff; everyone else a sword.
-        public static string WeaponArtFor(Hero hero) => hero is Mage ? "staff" : "sword";
+        // Each class carries its own weapon: a sword, a staff, a bow or a pair of daggers.
+        public static string WeaponArtFor(Hero hero) => hero switch
+        {
+            Mage => "staff",
+            Archer => "bow",
+            Rogue => "dagger",
+            _ => "sword"
+        };
 
         // The three art files stamped onto one grid. Built once per weapon picture.
         public static string[] CanvasFor(Hero hero)

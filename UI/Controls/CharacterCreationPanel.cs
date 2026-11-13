@@ -5,7 +5,7 @@
  *
  * Class description:
  * `CharacterCreationPanel.cs` is the new-hero screen. The name sits under the
-    title, and the two classes stand side by side as cards with their art,
+    title, and the four classes stand side by side as cards with their art,
     starting stats and special moves. The player types a name, then picks a
     class by number, by name, or by clicking its card.
  */
@@ -14,6 +14,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using ARDO.Core.Abstracts;
+using ARDO.Core.Factories;
 using ARDO.Game.Players;
 using ARDO.Interop;
 using ARDO.UI.Display;
@@ -24,12 +25,14 @@ namespace ARDO.UI.Controls
     {
         private const int MaxNameLength = 16;
         private const string NameHint = "Type your hero's name and press Enter. Esc returns to the start screen.";
-        private const string ClassHint = "Pick a class: 1 Warrior or 2 Mage (or click a card). Type back to rename.";
+        private const string ClassHint = "Pick a class: 1 Warrior, 2 Mage, 3 Archer or 4 Rogue (or click a card). Type back to rename.";
 
         private static readonly (string Class, string Art, string Pitch)[] Classes =
         {
-            ("Warrior", "warrior", "Steel and stubbornness. Takes the hits and answers with the blade."),
-            ("Mage", "mage", "Frail, but every spell lands hard, and lightning reaches every foe.")
+            ("Warrior", "warrior", "Takes the hits and answers with steel."),
+            ("Mage", "mage", "Frail, but every spell lands hard."),
+            ("Archer", "archer", "Fights at range. Sharp eyes, deadly crits."),
+            ("Rogue", "rogue", "In first, out clean. Poison and dodges.")
         };
 
         private readonly Action<string> _setHint;
@@ -43,7 +46,7 @@ namespace ARDO.UI.Controls
 
         public event Action<string>? CommandSuggested;
 
-        // Raised once both a name and a class are chosen: (name, "Warrior" or "Mage").
+        // Raised once both a name and a class are chosen: (name, "Warrior", "Mage", "Archer" or "Rogue").
         public event Action<string, string>? HeroChosen;
 
         public string CommandHint => _name == null ? NameHint : ClassHint;
@@ -63,14 +66,16 @@ namespace ARDO.UI.Controls
             var root = new TableLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                ColumnCount = 2,
+                ColumnCount = Classes.Length,
                 RowCount = 4,
-                Padding = new Padding(16, 12, 16, 8),
+                Padding = new Padding(12, 12, 12, 8),
                 BackColor = Color.Black
             };
 
-            root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
-            root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+            for (int i = 0; i < Classes.Length; i++)
+            {
+                root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F / Classes.Length));
+            }
             root.RowStyles.Add(new RowStyle(SizeType.Absolute, 56F));
             root.RowStyles.Add(new RowStyle(SizeType.Absolute, 44F));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
@@ -126,9 +131,9 @@ namespace ARDO.UI.Controls
                 TextAlign = ContentAlignment.MiddleCenter
             };
 
-            root.SetColumnSpan(title, 2);
-            root.SetColumnSpan(nameRow, 2);
-            root.SetColumnSpan(_feedbackLabel, 2);
+            root.SetColumnSpan(title, Classes.Length);
+            root.SetColumnSpan(nameRow, Classes.Length);
+            root.SetColumnSpan(_feedbackLabel, Classes.Length);
             root.Controls.Add(title, 0, 0);
             root.Controls.Add(nameRow, 0, 1);
             for (int i = 0; i < Classes.Length; i++)
@@ -145,14 +150,14 @@ namespace ARDO.UI.Controls
         private Panel BuildCard(int index)
         {
             (string className, string artFile, string pitch) = Classes[index];
-            Hero sample = index == 0 ? new Warrior(className) : new Mage(className);
+            Hero sample = HeroFactory.Create(className, className);
 
             var card = new Panel
             {
                 Dock = DockStyle.Fill,
                 BackColor = Color.Black,
-                Margin = new Padding(index == 0 ? 0 : 8, 6, index == 0 ? 8 : 0, 6),
-                Padding = new Padding(14, 10, 14, 10),
+                Margin = new Padding(index == 0 ? 0 : 4, 6, index == Classes.Length - 1 ? 0 : 4, 6),
+                Padding = new Padding(8, 10, 8, 10),
                 Cursor = Cursors.Hand
             };
             card.Paint += (_, e) =>
@@ -171,10 +176,10 @@ namespace ARDO.UI.Controls
                 Cursor = Cursors.Hand
             };
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 32F));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 62F));
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 52F));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 90F));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48F));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 84F));
 
             var heading = new Label
             {
@@ -190,7 +195,7 @@ namespace ARDO.UI.Controls
                 Dock = DockStyle.Fill,
                 Text = pitch,
                 ForeColor = Color.LightGray,
-                Font = UiFonts.Mono(9.5f),
+                Font = UiFonts.Mono(9f),
                 TextAlign = ContentAlignment.MiddleCenter
             };
 
@@ -201,19 +206,19 @@ namespace ARDO.UI.Controls
             var stats = new Label
             {
                 Dock = DockStyle.Fill,
-                Text = $"Health  {sample.MaxHealth,-6} Mana    {mana}\n" +
-                       $"Attack  {sample.BasicAttackDamage,-6} Crit    {sample.CritChancePercent}%",
+                Text = $"HP  {sample.MaxHealth,-4} Mana {mana}\n" +
+                       $"Atk {sample.BasicAttackDamage,-4} Crit {sample.CritChancePercent}%",
                 ForeColor = Color.LightGreen,
-                Font = UiFonts.Mono(10.5f),
+                Font = UiFonts.Mono(10f),
                 TextAlign = ContentAlignment.MiddleCenter
             };
 
             var moves = new Label
             {
                 Dock = DockStyle.Fill,
-                Text = "Special moves\n" + string.Join("\n", sample.GetCombatMoves().Select(move => $"{move.MoveName} ({move.Type.ToLowerInvariant()})")),
+                Text = "Special moves\n" + string.Join("\n", sample.GetCombatMoves().Select(move => move.MoveName)),
                 ForeColor = Color.LightSkyBlue,
-                Font = UiFonts.Mono(9.5f),
+                Font = UiFonts.Mono(9f),
                 TextAlign = ContentAlignment.TopCenter
             };
 
@@ -260,8 +265,12 @@ namespace ARDO.UI.Controls
             {
                 "1" => 0,
                 "2" => 1,
+                "3" => 2,
+                "4" => 3,
                 "warrior" or "w" when _name != null => 0,
                 "mage" or "m" when _name != null => 1,
+                "archer" or "a" when _name != null => 2,
+                "rogue" or "r" when _name != null => 3,
                 _ => -1
             };
 
@@ -273,7 +282,7 @@ namespace ARDO.UI.Controls
 
             if (index < 0)
             {
-                _feedbackLabel.Text = "Type 1 for Warrior or 2 for Mage.";
+                _feedbackLabel.Text = "Type 1 Warrior, 2 Mage, 3 Archer or 4 Rogue.";
                 return;
             }
 

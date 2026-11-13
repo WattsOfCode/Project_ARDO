@@ -17,6 +17,7 @@ using ARDO.Core.Entities;
 using ARDO.Core.Enums;
 using ARDO.Data;
 using ARDO.Game.Enemies;
+using ARDO.Game.Events;
 using ARDO.Game.Inventory;
 using ARDO.Game.Players;
 using ARDO.UI.Display;
@@ -34,6 +35,8 @@ namespace ARDO.Game.Combat
         private readonly List<Enemy> _enemies = new();
         private Hero _player = null!;
         private bool _isFinalBossEncounter;
+        // The throne fights after the story (the rematch and the shadow) can't be fled either.
+        private bool _noEscape;
         private int _finalBossRounds;
         private int _specialCooldownTurnsRemaining;
         private bool _awaitingSpecialChoice;
@@ -85,7 +88,8 @@ namespace ARDO.Game.Combat
 
             _player.ClearGuard();
             IsCombatActive = true;
-            _isFinalBossEncounter = _enemies.Any(enemy => enemy is Alhuezo);
+            _isFinalBossEncounter = _enemies.Any(enemy => enemy is Alhuezo { IsScripted: true });
+            _noEscape = _isFinalBossEncounter || _enemies.Any(enemy => enemy is Alhuezo or ShadowSelf);
             _finalBossRounds = 0;
             FinalBossEndingPlayed = false;
             _specialCooldownTurnsRemaining = 0;
@@ -111,6 +115,15 @@ namespace ARDO.Game.Combat
                 Say("The deepest chamber hushes around you.");
                 Say("Somewhere beyond the dark, Alhuezo, the God-King, waits with patient certainty.");
                 Say("This is not just another fight. It is the end of the road you have been walking.");
+            }
+            else if (_enemies.Any(enemy => enemy is Alhuezo))
+            {
+                Say("The three keys hang cold at your belt. The throne is not empty, and this time it is not certain.");
+                Say("Alhuezo rises. For the first time, he looks at you as if you might matter.");
+            }
+            else if (_enemies.Any(enemy => enemy is ShadowSelf))
+            {
+                Say("It moves when you move. It breathes when you breathe. It was always a step behind you.");
             }
 
             if (_player.Equipment.FirstWithEffect(ItemEffect.Warded) is GameItem ward)
@@ -246,6 +259,15 @@ namespace ARDO.Game.Combat
                     ? $"{enemy.Name} burns for {burned} damage."
                     : $"{enemy.Name} burns for {burned} damage and collapses in ash.", MessageTone.Gold);
             }
+
+            foreach (Enemy enemy in _enemies.Where(enemy => enemy.IsAlive && enemy.Poison.IsActive))
+            {
+                int poisoned = enemy.Poison.Tick();
+                enemy.TakeDamage(poisoned);
+                Say(enemy.IsAlive
+                    ? $"Poison eats at {enemy.Name} for {poisoned} damage."
+                    : $"Poison eats at {enemy.Name} for {poisoned} damage, and it does not get up.", MessageTone.Gold);
+            }
         }
 
         private void WriteAnnouncements()
@@ -264,7 +286,7 @@ namespace ARDO.Game.Combat
         private string CombatHint()
         {
             string special = _specialCooldownTurnsRemaining > 0 ? $"2 special (ready in {_specialCooldownTurnsRemaining})" : "2 special";
-            string flee = _isFinalBossEncounter ? "no fleeing" : $"3 flee ({_player.FleeChancePercent}%)";
+            string flee = _noEscape ? "no fleeing" : $"3 flee ({_player.FleeChancePercent}%)";
             string target = _enemies.Count(enemy => enemy.IsAlive) > 1 ? ", target N" : string.Empty;
             return $"Round {_round}: 1 attack, {special}, {flee}, 4 item{target}.";
         }
@@ -321,6 +343,11 @@ namespace ARDO.Game.Combat
                     status += "  burning";
                 }
 
+                if (enemy.Poison.IsActive)
+                {
+                    status += "  poisoned";
+                }
+
                 Say(status, ReferenceEquals(enemy, target) ? MessageTone.Command : MessageTone.Normal);
             }
 
@@ -337,7 +364,7 @@ namespace ARDO.Game.Combat
             // The full list once per fight; after that the buttons and the hint line carry it.
             _movesListed = true;
             Say("1. Basic Attack        2. Special Ability");
-            Say(_isFinalBossEncounter
+            Say(_noEscape
                 ? "3. Flee (no escape)    4. Use Item"
                 : $"3. Flee ({_player.FleeChancePercent}%)          4. Use Item");
             if (_enemies.Count(enemy => enemy.IsAlive) > 1)
@@ -401,9 +428,11 @@ namespace ARDO.Game.Combat
                 case "run":
                 case "retreat":
                 case "escape":
-                    if (_isFinalBossEncounter)
+                    if (_noEscape)
                     {
-                        Say("The throne closes the road behind you. There is no retreat from Alhuezo.", MessageTone.Warning);
+                        Say(_enemies.Any(enemy => enemy is ShadowSelf)
+                            ? "There is nowhere to run from your own shadow."
+                            : "The throne closes the road behind you. There is no retreat from Alhuezo.", MessageTone.Warning);
                         return PlayerActionOutcome.NoTurnSpent;
                     }
 
@@ -520,6 +549,24 @@ namespace ARDO.Game.Combat
                     };
                     break;
 
+                case Archer archer:
+                    line = selection switch
+                    {
+                        1 => archer.AimedShot(target),
+                        2 => archer.Volley(_enemies),
+                        _ => archer.PinningShot(target)
+                    };
+                    break;
+
+                case Rogue rogue:
+                    line = selection switch
+                    {
+                        1 => rogue.Backstab(target),
+                        2 => rogue.PoisonBlade(target),
+                        _ => rogue.SmokeStep()
+                    };
+                    break;
+
                 default:
                     line = "Your class has no special combat style defined.";
                     break;
@@ -596,7 +643,7 @@ namespace ARDO.Game.Combat
             EndCombat();
         }
 
-        // The First King's fight is a scripted loss: two rounds of pressure, then the epilogue.
+        // The God-King's first fight is a scripted loss: two rounds of pressure, then the epilogue.
         private void ResolveFinalBossTurn(Enemy boss)
         {
             _finalBossRounds++;
@@ -657,19 +704,10 @@ namespace ARDO.Game.Combat
             Say("\"You spoke so loudly of your destiny. Yet here you lie, painting my floors with your blood.", MessageTone.Warning);
             Say("Take your farce out of my sight.\"", MessageTone.Warning);
             Say("");
-            Say(" _____ _                 _                          ", MessageTone.Gold);
-            Say("/__   \\ |__   __ _ _ __ | | __  _   _  ___  _   _   ", MessageTone.Gold);
-            Say("  / /\\/ '_ \\ / _` | '_ \\| |/ / | | | |/ _ \\| | | |  ", MessageTone.Gold);
-            Say(" / /  | | | | (_| | | | |   <  | |_| | (_) | |_| |  ", MessageTone.Gold);
-            Say(" \\/   |_| |_|\\__,_|_| |_|_|\\_\\  \\__, |\\___/ \\__,_|  ", MessageTone.Gold);
-            Say("                                |___/               ", MessageTone.Gold);
-            Say("  __                    _                           ", MessageTone.Gold);
-            Say(" / _| ___  _ __   _ __ | | __ _ _   _(_)_ __   __ _ ", MessageTone.Gold);
-            Say("| |_ / _ \\| '__| | '_ \\| |/ _` | | | | | '_ \\ / _` |", MessageTone.Gold);
-            Say("|  _| (_) | |    | |_) | | (_| | |_| | | | | | (_| |", MessageTone.Gold);
-            Say("|_|  \\___/|_|    | .__/|_|\\__,_|\\__, |_|_| |_|\\__, |", MessageTone.Gold);
-            Say("                 |_|            |___/         |___/ ", MessageTone.Gold);
-            Say("");
+            foreach ((string text, MessageTone tone) in WheelEndings.ThankYou())
+            {
+                Say(text, tone);
+            }
 
             EndCombat();
         }
@@ -736,13 +774,17 @@ namespace ARDO.Game.Combat
         {
             if (hit.Missed)
             {
-                return $"{_player.Name} swings at {enemy.Name} and misses.";
+                return _player is Archer
+                    ? $"{_player.Name}'s arrow flies wide of {enemy.Name}."
+                    : $"{_player.Name} swings at {enemy.Name} and misses.";
             }
 
             string line = _player switch
             {
                 Mage => $"{_player.Name} snaps a quick arcane burst toward {enemy.Name} for {hit.Damage} damage.",
                 Warrior => $"{_player.Name} cuts into {enemy.Name} for {hit.Damage} damage.",
+                Archer => $"{_player.Name} puts an arrow in {enemy.Name} for {hit.Damage} damage.",
+                Rogue => $"{_player.Name} darts in and slashes {enemy.Name} for {hit.Damage} damage.",
                 _ => $"{_player.Name} lands a basic attack on {enemy.Name} for {hit.Damage} damage."
             };
 

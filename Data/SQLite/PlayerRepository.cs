@@ -15,6 +15,8 @@ using System.IO;
 using Microsoft.Data.Sqlite;
 using ARDO.Core.Abstracts;
 using ARDO.Core.Entities;
+using ARDO.Core.Enums;
+using ARDO.Core.Factories;
 using ARDO.Game.Players;
 
 namespace ARDO.Data.SQLite
@@ -33,7 +35,7 @@ namespace ARDO.Data.SQLite
         public int CreatePlayer(string name, string classType)
         {
             // The class constructors own the starting stats, so they are written in one place.
-            Hero hero = CreateHero(name, classType);
+            Hero hero = HeroFactory.Create(name, classType);
             int mana = hero is Mage mage ? mage.MaxMana : 0;
 
             using var connection = _config.CreateConnection();
@@ -60,7 +62,7 @@ namespace ARDO.Data.SQLite
             DataTable table = new DataTable();
             using var connection = _config.CreateConnection();
             const string query = @"
-                SELECT c.character_id, c.name, c.class_type, c.level, c.gold, c.story_complete, q.title as current_quest
+                SELECT c.character_id, c.name, c.class_type, c.level, c.gold, c.story_complete, c.wheel_ending, q.title as current_quest
                 FROM characters c
                 JOIN quest_templates q ON c.active_story_node = q.quest_id";
 
@@ -86,7 +88,7 @@ namespace ARDO.Data.SQLite
                     string name = reader["name"]?.ToString() ?? "Unknown Hero";
                     string classType = reader["class_type"]?.ToString() ?? "Warrior";
 
-                    hero = CreateHero(name, classType);
+                    hero = HeroFactory.Create(name, classType);
                     hero.CharacterId = Convert.ToInt32(reader["character_id"]);
                     hero.Level = Convert.ToInt32(reader["level"]);
                     hero.Experience = Convert.ToInt32(reader["experience"]);
@@ -95,6 +97,8 @@ namespace ARDO.Data.SQLite
                     hero.Gold = Convert.ToInt32(reader["gold"]);
                     hero.ActiveStoryNode = Convert.ToInt32(reader["active_story_node"]);
                     hero.StoryComplete = Convert.ToInt32(reader["story_complete"]) == 1;
+                    hero.WheelKeys = Convert.ToInt32(reader["wheel_keys"]);
+                    hero.WheelEnding = (WheelEnding)Convert.ToInt32(reader["wheel_ending"]);
 
                     if (hero is Mage mage)
                     {
@@ -119,7 +123,7 @@ namespace ARDO.Data.SQLite
                 UPDATE characters
                 SET level = @level, experience = @xp, current_health = @currentHp, max_health = @maxHp,
                     current_mana = @currentMana, max_mana = @maxMana, gold = @gold, active_story_node = @storyNode,
-                    story_complete = @storyComplete
+                    story_complete = @storyComplete, wheel_keys = @wheelKeys, wheel_ending = @wheelEnding
                 WHERE character_id = @charId;";
 
             using var command = new SqliteCommand(query, connection);
@@ -132,6 +136,8 @@ namespace ARDO.Data.SQLite
             command.Parameters.AddWithValue("@gold", character.Gold);
             command.Parameters.AddWithValue("@storyNode", character.ActiveStoryNode);
             command.Parameters.AddWithValue("@storyComplete", character.StoryComplete ? 1 : 0);
+            command.Parameters.AddWithValue("@wheelKeys", character.WheelKeys);
+            command.Parameters.AddWithValue("@wheelEnding", (int)character.WheelEnding);
             command.Parameters.AddWithValue("@charId", character.CharacterId);
 
             command.ExecuteNonQuery();
@@ -159,16 +165,6 @@ namespace ARDO.Data.SQLite
         public void SaveEquipment(Hero character)
         {
             _inventoryRepo.SaveEquippedFlags(character);
-        }
-
-        private static Hero CreateHero(string name, string classType)
-        {
-            return classType switch
-            {
-                "Warrior" => new Warrior(name),
-                "Mage" => new Mage(name),
-                _ => throw new InvalidDataException($"Unknown hero profile variant: {classType}")
-            };
         }
     }
 }

@@ -130,7 +130,12 @@ namespace ARDO.UI.Display
             for (int i = 0; i < _cachedSlots.Rows.Count; i++)
             {
                 DataRow row = _cachedSlots.Rows[i];
-                string fate = IsFinished(row) ? "  (fell to the God-King)" : string.Empty;
+                string fate = Convert.ToInt32(row["wheel_ending"]) switch
+                {
+                    1 => "  (turned the wheel)",
+                    2 => "  (stepped off the wheel)",
+                    _ => IsFinished(row) ? "  (fell to the God-King)" : string.Empty
+                };
                 _form.AppendNarrative($"{i + 1}. {row["name"],-18} Level {row["level"],-3} {row["class_type"]}{fate}");
             }
 
