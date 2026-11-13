@@ -29,7 +29,12 @@ namespace ARDO.UI.Controls
         private const float RenderFont = 8f;
 
         private string[] _lines = Array.Empty<string>();
-        private readonly Color _artColor = Color.LightGreen;
+        public static readonly Color DefaultArtColor = Color.LightGreen;
+
+        // A hero's shadow: the same picture in blood red.
+        public static readonly Color ShadowArtColor = Color.FromArgb(255, 95, 85);
+
+        private Color _artColor = DefaultArtColor;
         private Font? _font;
         private Size _fittedFor;
         private bool _fitted;
@@ -42,6 +47,21 @@ namespace ARDO.UI.Controls
             BackColor = Color.Black;
             Dock = DockStyle.Fill;
             TabStop = false;
+        }
+
+        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+        public Color ArtColor
+        {
+            get => _artColor;
+            set
+            {
+                if (_artColor == value)
+                    return;
+                _artColor = value;
+                _rendered?.Dispose();
+                _rendered = null;
+                Invalidate();
+            }
         }
 
         public void SetArt(string art)

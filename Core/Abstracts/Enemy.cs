@@ -48,6 +48,12 @@ namespace ARDO.Core.Abstracts
         // File name (without .txt) of this enemy's picture in Content/ASCII/Enemies.
         public virtual string ArtKey => "boss";
 
+        // Which Content/ASCII folder ArtKey is in. A foe drawn from a hero's own picture looks in Heroes.
+        public virtual string ArtFolder => "Enemies";
+
+        // True when the picture is shown in the shadow colour instead of the usual green.
+        public virtual bool ShadowTint => false;
+
         // How this enemy's attack reads in the combat log, after its name.
         public virtual string AttackLine => "attacks from the shadows.";
 

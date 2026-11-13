@@ -86,14 +86,16 @@ namespace ARDO.UI.Controls
         private void ShowPlayer(string name, string spriteKey)
         {
             _characterName.Text = name;
+            _asciiDisplay.ArtColor = AsciiArtView.DefaultArtColor;
             UpdateAsciiArt("Heroes", spriteKey);
         }
 
-        public void ShowEnemy(string name, string enemyFile)
+        public void ShowEnemy(string name, string folder, string enemyFile, bool shadowTint)
         {
             _characterName.Text = name;
 
-            UpdateAsciiArt("Enemies", enemyFile);
+            _asciiDisplay.ArtColor = shadowTint ? AsciiArtView.ShadowArtColor : AsciiArtView.DefaultArtColor;
+            UpdateAsciiArt(folder, enemyFile);
         }
 
         partial void InitializeComponent();

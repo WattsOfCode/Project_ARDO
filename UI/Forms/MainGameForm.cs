@@ -260,9 +260,9 @@ namespace ARDO.UI.Forms
             _characterPanel.ShowPlayer(name);
         }
 
-        public void ShowEnemy(string name, string spriteFileKey)
+        public void ShowEnemy(string name, string folder, string spriteFileKey, bool shadowTint)
         {
-            _characterPanel.ShowEnemy(name, spriteFileKey);
+            _characterPanel.ShowEnemy(name, folder, spriteFileKey, shadowTint);
         }
 
         public void FocusCommandInput()

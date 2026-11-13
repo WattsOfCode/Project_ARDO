@@ -14,8 +14,11 @@ namespace ARDO.Game.Enemies
 {
     public sealed class ShadowSelf : Boss
     {
-        private ShadowSelf(string heroName, int health, int damage) : base($"Shadow of {heroName}", health, damage)
+        private readonly string _heroArt;
+
+        private ShadowSelf(string heroName, string heroArt, int health, int damage) : base($"Shadow of {heroName}", health, damage)
         {
+            _heroArt = heroArt;
             XpReward = 450;
             GoldReward = 300;
         }
@@ -24,10 +27,15 @@ namespace ARDO.Game.Enemies
         {
             int health = 60 + 7 * hero.BasicAttackDamage;
             int damage = hero.MaxHealth / 12 + hero.Equipment.DefenseBonus * 7 / 8;
-            return new ShadowSelf(hero.Name, health, damage);
+            return new ShadowSelf(hero.Name, hero.ArtKey, health, damage);
         }
 
-        public override string ArtKey => "shadow";
+        // The hero's own portrait, a clone in another colour.
+        public override string ArtKey => _heroArt;
+
+        public override string ArtFolder => "Heroes";
+
+        public override bool ShadowTint => true;
 
         public override string AttackLine => "answers with your own blade, a beat behind you.";
 

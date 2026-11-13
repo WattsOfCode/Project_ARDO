@@ -795,7 +795,7 @@ namespace ARDO.Game.Combat
             if (target != null && !ReferenceEquals(target, _shownEnemy))
             {
                 _shownEnemy = target;
-                _form.ShowEnemy(target.Name, target.ArtKey);
+                _form.ShowEnemy(target.Name, target.ArtFolder, target.ArtKey, target.ShadowTint);
             }
         }
 
