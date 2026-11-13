@@ -110,6 +110,7 @@ namespace ARDO.Data.SQLite
                 EnsureColumnExists(connection, transaction, "characters", "wheel_ending", "INTEGER NOT NULL DEFAULT 0");
                 EnsureColumnExists(connection, transaction, "characters", "perks", "TEXT NOT NULL DEFAULT ''");
                 EnsureColumnExists(connection, transaction, "characters", "guardians_slain", "INTEGER NOT NULL DEFAULT 0");
+                EnsureColumnExists(connection, transaction, "characters", "wheel_turn", "INTEGER NOT NULL DEFAULT 0");
 
                 // Heroes from before perks get one to choose for every level they already earned.
                 if (EnsureColumnExists(connection, transaction, "characters", "pending_perks", "INTEGER NOT NULL DEFAULT 0"))
@@ -168,6 +169,7 @@ namespace ARDO.Data.SQLite
                         perks TEXT NOT NULL DEFAULT '',
                         pending_perks INTEGER NOT NULL DEFAULT 0,
                         guardians_slain INTEGER NOT NULL DEFAULT 0,
+                        wheel_turn INTEGER NOT NULL DEFAULT 0,
                         FOREIGN KEY (active_story_node) REFERENCES quest_templates(quest_id)
                     );";
 
@@ -187,7 +189,7 @@ namespace ARDO.Data.SQLite
             }
 
             const string columns = "character_id, name, class_type, level, experience, current_health, max_health, " +
-                                   "current_mana, max_mana, gold, active_story_node, story_complete, wheel_keys, wheel_ending, perks, pending_perks, guardians_slain";
+                                   "current_mana, max_mana, gold, active_story_node, story_complete, wheel_keys, wheel_ending, perks, pending_perks, guardians_slain, wheel_turn";
 
             using (var pragma = connection.CreateCommand())
             {

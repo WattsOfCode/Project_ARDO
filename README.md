@@ -49,6 +49,13 @@ This repository currently reflects the Phase 3 release of the project, including
   scatter when he falls; the Cinder Matron is healed by fire and looses a Firestorm every third turn; the Raven Witch
   drinks from every wound, turns blows aside with her parasol, and calls down her ravens when badly hurt.
   The first kill of each leaves an Epic trophy, and a hero can turn back before the fight, leaving the floor uncleared
+- The Wheel Turns Again: after either ending, option 6 in town turns the wheel once more. The hero keeps their level,
+  gear, gold and perks; the keys scatter and the guardians rise (with their Epic trophies) for another way to the
+  throne. Each turn keeps every twist before it and adds one: Bloodied Stone (enemies +25% health), Sharper Teeth
+  (+20% damage), The Crowded Dark (fights often bring one more foe), Wrathful Guardians (guardians and throne foes
+  +25% again) and Cold Hearths (the inn costs 30 gold). Past Turn 5 the wheel grinds on, +10% health and damage a
+  turn. Alhuezo and the shadow already grow with the hero, so they take 40% of each twist. Every turn pays 15% more
+  XP and gold, and the load list and stats panel show the hero's turn
 
 ## Screen Recording
 
@@ -100,6 +107,7 @@ When loading a save, choosing `0` returns the player to the main menu.
 - Weapon, armor, and consumable item systems
 - Quest-driven story progression
 - Level-up perks that shape each hero's build
+- Repeatable harder runs after an ending (The Wheel Turns Again)
 - SQLite save/load support with repository-based data access
 
 ## Extended Features

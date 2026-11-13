@@ -12,12 +12,63 @@ using System;
 using System.Collections.Generic;
 using ARDO.Core.Abstracts;
 using ARDO.Core.Enums;
+using ARDO.Game.Progression;
 
 namespace ARDO.Game.Events
 {
     public static class WheelEvents
     {
         public static readonly string[] KeyNames = { "Bone Key", "Ember Key", "Cathedral Key" };
+
+        public const string TurnAgainTitle = "THE WHEEL TURNS AGAIN";
+
+        // Offered in town once a hero has reached an ending: start the floors over, harder.
+        public static DungeonEvent TurnAgain(Hero hero)
+        {
+            int next = hero.WheelTurn + 1;
+            var lines = new List<string>
+            {
+                "The wheel is still. You could leave it that way.",
+                "Or set your hands to it once more. The keys would scatter, the guardians would rise, and the dark would come back hungrier.",
+                "",
+                $"Turn {next} adds:"
+            };
+
+            WheelTwist? added = WheelTurns.AddedAt(next);
+            lines.Add(added != null ? $"  {added.Name}: {added.Description}" : $"  {WheelTurns.GrindLine(next)}");
+
+            bool first = true;
+            foreach (WheelTwist kept in WheelTurns.InForce(hero.WheelTurn))
+            {
+                if (first)
+                    lines.Add("Still in force:");
+                first = false;
+                lines.Add($"  {kept.Name}: {kept.Description}");
+            }
+
+            lines.Add("");
+            lines.Add($"You keep your level, gear, gold and perks. Enemies pay {WheelTurns.RewardPercent(next) - 100}% more XP and gold.");
+
+            return new DungeonEvent(
+                TurnAgainTitle,
+                lines,
+                new[]
+                {
+                    new EventChoice($"Turn the wheel (Turn {next})", h =>
+                    {
+                        h.WheelTurn = next;
+                        h.WheelEnding = WheelEnding.None;
+                        h.WheelKeys = 0;
+                        h.GuardiansSlain = 0;
+                        return new EventOutcome()
+                            .Say("")
+                            .Say("You set your shoulder to the wheel, and it turns.", MessageTone.Gold)
+                            .Say("Far below, three keys drop into the dark, and something on every floor opens its eyes.", MessageTone.Warning);
+                    }),
+                    new EventChoice("Leave it still", _ =>
+                        new EventOutcome().Say("You let the wheel rest. It will wait.", MessageTone.Dim))
+                });
+        }
 
         // The hidden key for a floor (1 to 3).
         public static DungeonEvent KeyFor(int floor)

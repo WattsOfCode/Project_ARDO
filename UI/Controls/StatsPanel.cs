@@ -80,6 +80,7 @@ namespace ARDO.UI.Controls
             string keys = hero.StoryComplete && hero.WheelEnding == ARDO.Core.Enums.WheelEnding.None
                 ? $"\nKeys      {hero.WheelKeyCount} of 3"
                 : string.Empty;
+            string turnLine = hero.WheelTurn > 0 ? $"\nWheel     Turn {hero.WheelTurn}" : string.Empty;
 
             _rawText =
 $@"================================
@@ -92,7 +93,7 @@ XP      {TextBar.Render(hero.Experience, hero.ExperienceToNextLevel)} {hero.Expe
 Weapon    {weaponLine}
 Armor     {armorLine}{blessing}
 
-Gold      {hero.Gold}{perks}{keys}
+Gold      {hero.Gold}{perks}{keys}{turnLine}
 
 ================================";
             _scrollToEnd = false;

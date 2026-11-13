@@ -49,6 +49,9 @@ namespace ARDO.Core.Abstracts
         // Floor guardians this hero has beaten at least once (one bit per floor, 1 to 3).
         public int GuardiansSlain { get; set; }
 
+        // How many times this hero has turned the wheel again after an ending (0 on the first story).
+        public int WheelTurn { get; set; }
+
         public bool HasSlainGuardian(int floor) => (GuardiansSlain & (1 << (floor - 1))) != 0;
 
         public bool HasWheelKey(int floor) => (WheelKeys & (1 << (floor - 1))) != 0;
@@ -90,8 +93,9 @@ namespace ARDO.Core.Abstracts
         public bool LastStandUsed { get; set; }
         public bool LastStandTriggered { get; set; }
 
-        public int WithXpBonus(int xp) => HasPerk(PerkId.QuickStudy) ? xp * 6 / 5 : xp;
-        public int WithGoldBonus(int gold) => HasPerk(PerkId.Scavenger) ? gold * 5 / 4 : gold;
+        // Each turn of the wheel pays 15% more XP and gold (WheelTurns.RewardPercentPerTurn).
+        public int WithXpBonus(int xp) => (HasPerk(PerkId.QuickStudy) ? xp * 6 / 5 : xp) * (100 + 15 * WheelTurn) / 100;
+        public int WithGoldBonus(int gold) => (HasPerk(PerkId.Scavenger) ? gold * 5 / 4 : gold) * (100 + 15 * WheelTurn) / 100;
 
         // The last attack this hero made, so the combat log can color crits and misses.
         public HitResult LastHit { get; private set; }

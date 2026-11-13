@@ -17,6 +17,7 @@ using ARDO.Core.Entities;
 using ARDO.Core.Enums;
 using ARDO.Data;
 using ARDO.Game.Enemies;
+using ARDO.Game.Progression;
 using ARDO.Game.Events;
 using ARDO.Game.Inventory;
 using ARDO.Game.Players;
@@ -86,6 +87,10 @@ namespace ARDO.Game.Combat
             foreach (Enemy enemy in _enemies)
             {
                 enemy.CombatFloor = _player.ActiveStoryNode;
+
+                // The scripted first meeting with Alhuezo is a story beat, not a fight to scale.
+                if (enemy is not Alhuezo { IsScripted: true })
+                    WheelTurns.Strengthen(enemy, _player.WheelTurn);
             }
 
             _player.ClearGuard();
@@ -267,6 +272,7 @@ namespace ARDO.Game.Combat
                 foreach (Enemy called in caller.TakeSummons())
                 {
                     called.CombatFloor = _player.ActiveStoryNode;
+                    WheelTurns.Strengthen(called, _player.WheelTurn);
                     _enemies.Add(called);
                 }
             }

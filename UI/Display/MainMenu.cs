@@ -136,7 +136,9 @@ namespace ARDO.UI.Display
                     2 => "  (stepped off the wheel)",
                     _ => IsFinished(row) ? "  (fell to the God-King)" : string.Empty
                 };
-                _form.AppendNarrative($"{i + 1}. {row["name"],-18} Level {row["level"],-3} {row["class_type"]}{fate}");
+                int turn = Convert.ToInt32(row["wheel_turn"]);
+                string turnText = turn > 0 ? $"  Turn {turn}" : string.Empty;
+                _form.AppendNarrative($"{i + 1}. {row["name"],-18} Level {row["level"],-3} {row["class_type"]}{turnText}{fate}");
             }
 
             _form.SetCommandContext($"Load: pick a hero 1 to {_cachedSlots.Rows.Count}, or 0 to go back.");
