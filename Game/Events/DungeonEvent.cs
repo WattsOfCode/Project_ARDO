@@ -50,6 +50,12 @@ namespace ARDO.Game.Events
         public WheelEnding ThroneFight { get; set; }
         public bool GoHome { get; set; }
 
+        // At a fork or a door: another event to open right away (or after the ambush, if there is one),
+        // straight on to the next fight, or a room instead of the next fight.
+        public DungeonEvent? FollowUp { get; set; }
+        public bool FightNow { get; set; }
+        public bool RoomInsteadOfFight { get; set; }
+
         public EventOutcome Say(string text, MessageTone tone = MessageTone.Normal)
         {
             Lines.Add((text, tone));

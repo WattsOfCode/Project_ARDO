@@ -39,6 +39,9 @@ This repository currently reflects the Phase 3 release of the project, including
   for a rematch with Alhuezo that can be won, and the wheel turns forward. A rogue can instead pick the door's
   servant lock and fight their own shadow for a second ending. The load list shows which ending each hero reached
 - Saves from earlier versions open with the new classes available; nothing in them is lost
+- Between fights the passage forks left and right, each way with a hint of what lies down it. Most lead to the
+  next fight; some to an event, or to a door. Behind a door is a treasure chest (sometimes trapped, sometimes
+  guarded) or an empty room to catch your breath. A rogue can pick a chest's lock and skip the trap
 
 ## Screen Recording
 

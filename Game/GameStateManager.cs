@@ -26,9 +26,6 @@ namespace ARDO.Game
 {
     public class GameStateManager
     {
-        // Chance of an event between two fights of a dungeon run.
-        private const int EventChancePercent = 45;
-
         private readonly MainGameForm _ui;
         private readonly Hero _hero;
         private readonly IPlayerRepository _playerRepo;
@@ -39,6 +36,11 @@ namespace ARDO.Game
         private DungeonEvent? _activeEvent;
         private bool _onSidePassage;
         private bool _inAmbush;
+
+        // Between fights the passage forks. A side that leads to a room (a door or an event)
+        // goes on to the next fight afterward, and a chest behind guards waits for the fight to end.
+        private bool _afterRoom;
+        private DungeonEvent? _pendingEvent;
 
         // The quest whose story has been told this session, so a return to town doesn't retell it.
         private int _introShownForQuest;
@@ -115,6 +117,8 @@ namespace ARDO.Game
             _encountersRemainingInRun = 0;
             _onSidePassage = false;
             _inAmbush = false;
+            _afterRoom = false;
+            _pendingEvent = null;
             _activeEvent = null;
             _choosingFloor = false;
             _throneFight = WheelEnding.None;
@@ -368,15 +372,24 @@ namespace ARDO.Game
         // What comes after a won fight or a finished event.
         private void ContinueDungeonRun()
         {
+            if (_pendingEvent != null)
+            {
+                DungeonEvent next = _pendingEvent;
+                _pendingEvent = null;
+                BeginEvent(next);
+                return;
+            }
+
             if (_encountersRemainingInRun > 0)
             {
-                if (Random.Shared.Next(100) < EventChancePercent)
+                if (_afterRoom || _onSidePassage)
                 {
-                    BeginEvent(DungeonEvents.RollRandom());
+                    _afterRoom = false;
+                    StartNextDungeonEncounter();
                     return;
                 }
 
-                StartNextDungeonEncounter();
+                BeginEvent(PassageEvents.Fork());
                 return;
             }
 
@@ -483,9 +496,11 @@ namespace ARDO.Game
         {
             if (_activeEvent != null)
             {
-                _ui.SetCommandContext($"Choose 1 to {_activeEvent.Choices.Count}.");
+                _ui.SetCommandContext(ChoicePrompt(_activeEvent.Choices.Count));
             }
         }
+
+        private static string ChoicePrompt(int count) => count == 2 ? "Choose 1 or 2." : $"Choose 1 to {count}.";
 
         private void ProcessEventChoice(string command)
         {
@@ -498,7 +513,7 @@ namespace ARDO.Game
 
             if (!int.TryParse(command, out int choice) || choice < 1 || choice > dungeonEvent.Choices.Count)
             {
-                Say($"Choose 1 to {dungeonEvent.Choices.Count}.", MessageTone.Dim);
+                Say(ChoicePrompt(dungeonEvent.Choices.Count), MessageTone.Dim);
                 return;
             }
 
@@ -549,7 +564,17 @@ namespace ARDO.Game
             else if (outcome.StartsAmbush)
             {
                 _inAmbush = true;
+                _pendingEvent = outcome.FollowUp;
                 EnterCombat(EncounterTable.RollGroup(_hero.ActiveStoryNode));
+            }
+            else if (outcome.FightNow)
+            {
+                StartNextDungeonEncounter();
+            }
+            else if (outcome.FollowUp != null)
+            {
+                _afterRoom |= outcome.RoomInsteadOfFight;
+                BeginEvent(outcome.FollowUp);
             }
             else
             {
@@ -779,6 +804,8 @@ namespace ARDO.Game
             _encountersRemainingInRun = EncounterTable.FightsPerRun(_hero.ActiveStoryNode);
             _onSidePassage = false;
             _inAmbush = false;
+            _afterRoom = false;
+            _pendingEvent = null;
 
             Say("");
             Say(quest != null
