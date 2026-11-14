@@ -30,8 +30,8 @@ namespace ARDO.Game.Events
             yield return ("Alhuezo goes down to one knee, and the great wheel above the throne shudders,", MessageTone.Normal);
             yield return ("caught between the way it was made to turn and the way he forced it.", MessageTone.Normal);
             yield return ("", MessageTone.Normal);
-            yield return ("\"I invented it,\" he says, almost gently. \"Every turn of it was mine.\"", MessageTone.Warning);
-            yield return ($"\"Then it can turn the way it was meant to,\" {hero.Name} answers.", MessageTone.Command);
+            yield return ("\"I invented this world's time,\" he says, almost gently. \"Every turn of it was mine.\"", MessageTone.Warning);
+            yield return ($"\"This world's direction and movement aren't yours to claim,\" {hero.Name} answers.", MessageTone.Command);
             yield return ("", MessageTone.Normal);
             yield return ("Bone, ember, silver: the three keys fit the hub. You put your weight against the spokes.", MessageTone.Normal);
             yield return ("The wheel groans, slows, and for the first time since the Beginning, turns forward.", MessageTone.Normal);

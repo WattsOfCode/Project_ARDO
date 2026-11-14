@@ -937,7 +937,7 @@ namespace ARDO.Game
             Say($"[Inn Keeper] Maren: \"{rumor}\"", MessageTone.Dim);
             if (_hero.CanPickLocks)
             {
-                Say("[Inn Keeper] Maren: \"Then again, anything locked three times over usually has a fourth way in, for the servants.\"", MessageTone.Dim);
+                Say("[Inn Keeper] Maren: \"Then again, anything locked three times over usually has a fourth way in.\"", MessageTone.Dim);
             }
         }
 

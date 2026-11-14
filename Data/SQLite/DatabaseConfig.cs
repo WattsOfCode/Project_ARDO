@@ -132,10 +132,10 @@ namespace ARDO.Data.SQLite
                 Execute(connection, transaction, "DELETE FROM npcs;");
                 Execute(connection, transaction, @"
                     INSERT INTO npcs (name, role_title, greeting_dialogue, associated_quest_id) VALUES
-                    ('Maren', 'Inn Keeper', 'You slept through the first bell, but the road below the town is already open. Drink, rest, and then descend when you are ready.', 1),
+                    ('Maren', 'Inn Keeper', 'You slept through the first bell, but the town is already bustling. Drink, rest, and descend into the dungeon when you are ready.', 1),
                     ('Eldrin', 'Wandering Scout', 'The fire below does not burn rock. It burns memory. Keep your guard up.', 2),
                     ('Sera', 'Cathedral Scribe', 'The hollow bells still ring. When they do, the next descent begins.', 3),
-                    ('Maren', 'Inn Keeper', 'The bells have gone quiet. Whatever sits on that throne has waited a long time for you. Rest first. Some roads only run one way.', 4);");
+                    ('Maren', 'Inn Keeper', 'The bells have gone quiet recently. Whatever is down in the depths has waited a long time for someone like you. Rest first. Some roads only run one way.', 4);");
 
                 transaction.Commit();
             }

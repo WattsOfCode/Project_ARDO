@@ -48,7 +48,7 @@ namespace ARDO.Game.Enemies
                 var lackey = new Goblin { Name = "Goblin Lackey", XpReward = 5, GoldReward = 0 };
                 _court.Add(lackey);
                 Summon(lackey);
-                return $"{Name} lifts the burning skull and shrieks \"GET 'IM!\" A Goblin Lackey scrambles out of the dark.";
+                return $"{Name} lifts the burning skull and shrieks \"Destroy them!\" A Goblin Lackey scrambles out of the dark.";
             }
 
             int taxed = Math.Min(hero.Gold, 8 + CombatFloor * 2);
@@ -57,7 +57,7 @@ namespace ARDO.Game.Enemies
 
             hero.Gold -= taxed;
             GoldReward += taxed;
-            return $"{Name} points his blade at your pouch. \"Royal tax!\" A lackey's quick hands take {taxed} gold.";
+            return $"{Name} points his blade at your pouch. \"Consider this a royal tax.\" A lackey's quick hands take {taxed} gold.";
         }
 
         public override void TakeDamage(int amount)
