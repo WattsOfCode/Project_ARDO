@@ -59,6 +59,12 @@ This repository currently reflects the Phase 3 release of the project, including
 - Run summary: every trip into the dungeon ends with a tally of fights won, foes slain, XP and gold earned,
   items found and levels gained, plus any first guardian kill or key of the wheel. It shows on the way back to town,
   on death (before the choice to rise again) and after an ending
+- Guardians' second phase: from Turn 2 of the wheel, each floor guardian changes how it fights below half health.
+  Grisk puts on a gilded ward that soaks blows and grows with every coin he taxes; the Cinder Matron breaks the
+  floor open, and the magma burns the hero (through armor and dodges) a little hotter every round; the Raven Witch
+  goes to mist behind three ravens, and no blow reaches her while they live and feed her. The approach warns of it
+- Defeat screen: a fallen hero chooses between two cards, Rise Again (50 gold) or Start a New Hero, which erases
+  the save after a second confirmation and opens the new-hero screen. The run summary shows underneath
 
 ## Screen Recording
 

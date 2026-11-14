@@ -34,6 +34,12 @@ namespace ARDO.Core.Abstracts
         public int GoldReward { get; set; }
         public int CombatFloor { get; set; } = 1;
 
+        // The turn of the wheel this enemy was made for (set when the fight starts).
+        public int WheelTurn { get; set; }
+
+        // True while no blow can reach it (a witch gone to mist); attacks turn to another foe.
+        public virtual bool Untouchable => false;
+
         // What this enemy will do on its next turn. The first turn is always a normal attack.
         public EnemyIntent NextIntent { get; protected set; } = EnemyIntent.Attack;
 

@@ -269,6 +269,12 @@ namespace ARDO.Game
         {
             string normalized = command.Trim().ToLower();
 
+            if (CurrentState == GameState.DefeatPrompt)
+            {
+                ProcessDefeatPrompt(normalized);
+                return;
+            }
+
             // The pack and the gear screen can be opened from anywhere they make sense.
             if (IsInventoryCommand(normalized))
             {
@@ -447,7 +453,7 @@ namespace ARDO.Game
                 Say(text, tone);
             }
 
-            EndRunTally(ending == WheelEnding.SteppedOff ? "Stepped off the wheel" : "Turned the wheel", always: true);
+            EndRunTally(ending == WheelEnding.SteppedOff ? "Stepped off the wheel" : "Guided the wheel as the throne called to you", always: true);
             CurrentState = GameState.GameOver;
             _ui.SetCommandContext("Type anything and press Enter to return to the start screen.");
             Say("The story is complete.", MessageTone.Dim);
@@ -486,7 +492,7 @@ namespace ARDO.Game
             if (!_onSidePassage && !_guardianFaced && _hero.ActiveStoryNode < EncounterTable.FinalQuestId)
             {
                 _guardianFaced = true;
-                BeginEvent(GuardianEvents.Approach(_hero.ActiveStoryNode));
+                BeginEvent(GuardianEvents.Approach(_hero.ActiveStoryNode, _hero.WheelTurn));
                 return;
             }
 
@@ -751,18 +757,21 @@ namespace ARDO.Game
         }
 
         // Reads out the trip just ended. A trip with nothing in it is skipped, unless it ended in death or an ending.
-        private void EndRunTally(string outcome, bool always = false)
+        private IReadOnlyList<(string Text, MessageTone Tone)> EndRunTally(string outcome, bool always = false)
         {
             RunTally? run = _run;
             _run = null;
             _runOutcome = "Returned to Oakhaven";
             if (run == null || (!always && run.IsEmpty(_hero)))
-                return;
+                return Array.Empty<(string, MessageTone)>();
 
-            foreach ((string text, MessageTone tone) in run.Summary(_hero, outcome))
+            var lines = run.Summary(_hero, outcome).ToList();
+            foreach ((string text, MessageTone tone) in lines)
             {
                 Say(text, tone);
             }
+
+            return lines;
         }
 
         // The town description only on arrival; after that, just the choices.
@@ -1038,18 +1047,27 @@ namespace ARDO.Game
             EnterCombat(encounterGroup);
         }
 
+        private const int RiseCost = 50;
+
+        // The fallen hero chooses on a screen of two cards: rise again, or let go and start a new hero.
         private void HandleDefeatStart()
         {
             CurrentState = GameState.DefeatPrompt;
-            _ui.SetCommandContext("Type 1 to rise again in Oakhaven (50 gold), or 2 to erase this hero.");
             Say("");
             Say("You fall to the dungeon floor, breath gone and vision dimming.", MessageTone.Damage);
-            EndRunTally("Fell in the dark", always: true);
+            var summary = EndRunTally("Fell in the dark", always: true);
             Say("");
-            Say("1 Rise again in Oakhaven (50 gold)   2 Let this hero go");
-            Say("Letting go erases this hero's save for good.", MessageTone.Warning);
+            Say($"1 Rise again in Oakhaven ({RiseCost} gold)   2 Start a new hero");
+            Say("Starting a new hero erases this hero's save for good.", MessageTone.Warning);
+
+            var panel = new DefeatPanel(_hero, RiseCost, summary.Select(line => line.Text));
+            panel.Decided += ResolveDefeat;
+            panel.HintChanged += _ui.SetCommandContext;
+            _openPanel = panel;
+            _ui.ShowOverlay(panel);
         }
 
+        // Typed straight to the game (the screen asks twice before erasing; this is its answer).
         private void ProcessDefeatPrompt(string command)
         {
             switch (command)
@@ -1057,7 +1075,34 @@ namespace ARDO.Game
                 case "yes":
                 case "y":
                 case "1":
-                    _hero.Gold = Math.Max(0, _hero.Gold - 50);
+                    ResolveDefeat(true);
+                    break;
+
+                case "2":
+                    ResolveDefeat(false);
+                    break;
+
+                default:
+                    Say("Type 1 to rise again, or 2 to start a new hero.", MessageTone.Dim);
+                    break;
+            }
+        }
+
+        private void ResolveDefeat(bool rise)
+        {
+            if (CurrentState != GameState.DefeatPrompt)
+                return;
+
+            if (_openPanel is DefeatPanel)
+            {
+                _openPanel = null;
+                _ui.RestoreNarrativePanel();
+            }
+
+            switch (rise)
+            {
+                case true:
+                    _hero.Gold = Math.Max(0, _hero.Gold - RiseCost);
                     _hero.RestoreForTown();
                     Say("");
                     Say("Rise, hero. There is still much more for you to do.", MessageTone.Gold);
@@ -1074,17 +1119,11 @@ namespace ARDO.Game
                     EnterTown();
                     break;
 
-                case "no":
-                case "n":
-                case "2":
+                case false:
                     _playerRepo.DeleteProfile(_hero.CharacterId);
                     Say("");
                     Say("Your character is erased from the records of Oakhaven.", MessageTone.Damage);
-                    _ui.ReturnToMainMenu();
-                    break;
-
-                default:
-                    Say("Type 1 to rise again, or 2 to let this hero go.", MessageTone.Dim);
+                    _ui.StartNewHero();
                     break;
             }
         }

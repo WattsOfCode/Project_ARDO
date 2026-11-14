@@ -57,7 +57,7 @@ namespace ARDO.Game.Progression
             int levels = hero.Level - _startLevel;
 
             yield return ("", MessageTone.Normal);
-            yield return ("---------------------- RUN SUMMARY ----------------------", MessageTone.Header);
+            yield return ("---------------------- RUN SUMMARY -----------------------", MessageTone.Header);
             yield return (WheelTurn > 0 ? $"{Place}, wheel turn {WheelTurn}: {outcome}" : $"{Place}: {outcome}", MessageTone.Header);
             yield return ($"Fights won   {FightsWon,-6}  Foes slain   {FoesSlain}", MessageTone.Normal);
             yield return ($"XP earned    {XpEarned,-6}  Gold         {(gold >= 0 ? "+" : "")}{gold}", MessageTone.Gold);

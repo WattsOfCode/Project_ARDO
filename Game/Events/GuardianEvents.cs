@@ -25,10 +25,10 @@ namespace ARDO.Game.Events
             _ => new RavenWitch()
         };
 
-        public static DungeonEvent Approach(int floor)
+        public static DungeonEvent Approach(int floor, int wheelTurn = 0)
         {
             Enemy guardian = For(floor);
-            IReadOnlyList<string> description = floor switch
+            List<string> description = new(floor switch
             {
                 1 => new[]
                 {
@@ -48,7 +48,17 @@ namespace ARDO.Game.Events
                     "white hair stirring though there is no wind. A furled black parasol hangs at her side. Ravens line the spires, watching.",
                     "Every wound she gives, she drinks. Her open parasol turns aside the next blow. Hurt her badly and the ravens come down."
                 }
-            };
+            });
+
+            if (wheelTurn >= Progression.WheelTurns.SecondPhaseTurn)
+            {
+                description.Add(floor switch
+                {
+                    1 => "This turn of the wheel, his treasure sack bulges. Hurt him badly and he will hide behind every coin he has taken from you.",
+                    2 => "This turn of the wheel, the ground here glows. Hurt her badly and the floor itself will burn you, hotter every round.",
+                    _ => "This turn of the wheel, the ravens are hungrier. Hurt her badly and she will hide in them, and they will feed her."
+                });
+            }
 
             return new DungeonEvent(
                 TitlePrefix + guardian.Name.ToUpperInvariant(),

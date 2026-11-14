@@ -123,10 +123,10 @@ namespace ARDO.Data.SQLite
 
                 Execute(connection, transaction, @"
                     INSERT OR REPLACE INTO quest_templates (quest_id, title, narrative_intro, target_enemy_type, is_final_node) VALUES
-                    (1, 'The First Descent', 'You wake in Oakhaven at the Inn Keeper''s bedside, and the town above the Maw remembers the reversal of life.', 'Minion', 0),
+                    (1, 'The First Descent', 'You wake in Oakhaven at the Inn of the Drunken Mare, your eyes heavy after a groggy night of slumber. You dreamt of riches, glory, or perhaps secrets untold, and you know adventure awaits.', 'Minion', 0),
                     (2, 'The Emberward Depths', 'The second layer of the dungeon burns with old judgment and restless echoes.', 'Minion', 0),
-                    (3, 'The Hollow Cathedral', 'Deeper still, a broken cathedral echoes with the prayers of things that should not live.', 'Minion', 0),
-                    (4, 'The God-King Awaits', 'At the root of all things sits the origin of the world: Alhuezo, the God-King.', 'Boss', 1);");
+                    (3, 'The Hollow Cathedral', 'Deeper still, the bells of a broken cathedral toll, echoing with the prayers of things that should not live.', 'Minion', 0),
+                    (4, 'The God-King Awaits', 'At the root of all things sits the origin of the world: Alhuezo, the Maker of Realms.', 'Boss', 1);");
 
                 // NPC rows are fixed content: replace them on every launch so edits here reach old saves.
                 Execute(connection, transaction, "DELETE FROM npcs;");

@@ -24,7 +24,7 @@ namespace ARDO.Game.Progression
         public static readonly IReadOnlyList<WheelTwist> Twists = new[]
         {
             new WheelTwist(1, "Bloodied Stone", "Enemies have a quarter more health."),
-            new WheelTwist(2, "Sharper Teeth", "Enemies hit a fifth harder."),
+            new WheelTwist(2, "Sharper Teeth", "Enemies hit a fifth harder, and guardians rise into a second phase at half health."),
             new WheelTwist(3, "The Crowded Dark", "Fights often bring one more foe."),
             new WheelTwist(4, "Wrathful Guardians", "Guardians and the foes at the throne grow a quarter stronger again."),
             new WheelTwist(5, "Cold Hearths", $"The inn charges {ColdHearthRestCost} gold a night."),
@@ -39,6 +39,9 @@ namespace ARDO.Game.Progression
         public const int RewardPercentPerTurn = 15;
 
         public const int CrowdedChancePercent = 40;
+
+        // From this turn on, each floor guardian changes how it fights once it drops below half health.
+        public const int SecondPhaseTurn = 2;
 
         // Alhuezo and the shadow already grow with the hero, so they take only this share of each twist.
         public const int ThroneSharePercent = 40;
@@ -74,6 +77,7 @@ namespace ARDO.Game.Progression
         // Makes a freshly made enemy as strong as this turn of the wheel asks.
         public static void Strengthen(Enemy enemy, int turn)
         {
+            enemy.WheelTurn = Math.Max(0, turn);
             if (turn <= 0)
                 return;
 

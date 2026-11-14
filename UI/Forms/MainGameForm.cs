@@ -29,7 +29,7 @@ namespace ARDO.UI.Forms
         private readonly QuestRepository _questRepo;
         private readonly GameMenu _mainMenu;
         private Hero? _activeHero;
-        private readonly GameLaunchMode _launchMode;
+        private GameLaunchMode _launchMode;
 
         private Panel _gameShell = null!;
         private Panel _storyHost = null!;
@@ -317,6 +317,21 @@ namespace ARDO.UI.Forms
             }
 
             SetCommandContext("Type a command and press Enter.");
+        }
+
+        // A fallen hero was let go: straight to the new-hero screen, and the new hero hears the opening story.
+        public void StartNewHero()
+        {
+            RestoreNarrativePanel();
+            _activeHero = null;
+            _gameState = null;
+            _launchMode = GameLaunchMode.NewGame;
+            _quickActions.SetActionsEnabled(false);
+            _quickActions.SetFightMode(false);
+            _statsPanel.ShowPlaceholder(NoHeroMessage);
+            _characterPanel.UpdateCharacterName("ARDO");
+            _mainMenu.BeginNewGame();
+            FocusCommandInput();
         }
 
         public void ReturnToMainMenu()

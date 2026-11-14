@@ -239,6 +239,26 @@ namespace ARDO.Core.Abstracts
             CurrentHealth = Math.Max(0, CurrentHealth - damage);
         }
 
+        // Damage from the ground itself: no armor or dodge, but Last Stand still holds. Returns what it took.
+        public int TakeUnblockableDamage(int damage)
+        {
+            if (damage <= 0 || CurrentHealth <= 0)
+                return 0;
+
+            if (damage >= CurrentHealth && HasPerk(PerkId.LastStand) && !LastStandUsed)
+            {
+                LastStandUsed = true;
+                LastStandTriggered = true;
+                int taken = CurrentHealth - 1;
+                CurrentHealth = 1;
+                return taken;
+            }
+
+            int dealt = Math.Min(CurrentHealth, damage);
+            CurrentHealth -= dealt;
+            return dealt;
+        }
+
         // Burn damage ignores armor.
         public int TakeBurnDamage()
         {

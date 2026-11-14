@@ -893,6 +893,13 @@ namespace ARDO.Game.Combat
         // The chosen target, or the first one still standing if it has fallen.
         private Enemy? GetTarget()
         {
+            // A foe no blow can reach gives way to one that can, if there is one.
+            if (_targetIndex >= 0 && _targetIndex < _enemies.Count && _enemies[_targetIndex].IsAlive
+                && _enemies[_targetIndex].Untouchable && _enemies.Any(enemy => enemy.IsAlive && !enemy.Untouchable))
+            {
+                _targetIndex = _enemies.FindIndex(enemy => enemy.IsAlive && !enemy.Untouchable);
+            }
+
             if (_targetIndex >= 0 && _targetIndex < _enemies.Count && _enemies[_targetIndex].IsAlive)
             {
                 return _enemies[_targetIndex];
