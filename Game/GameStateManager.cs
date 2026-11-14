@@ -64,6 +64,10 @@ namespace ARDO.Game
         private bool _keyRumorShown;
         private const int KeyEventChancePercent = 60;
 
+        // The trip into the dungeon under way, read out as a summary when it ends.
+        private RunTally? _run;
+        private string _runOutcome = "Returned to Oakhaven";
+
         public GameState CurrentState { get; private set; } = GameState.Town;
 
         // The event on screen, if any, by its title.
@@ -133,6 +137,7 @@ namespace ARDO.Game
 
         public void EnterTown()
         {
+            EndRunTally(_runOutcome);
             CurrentState = GameState.Town;
             _encountersRemainingInRun = 0;
             _onSidePassage = false;
@@ -406,6 +411,7 @@ namespace ARDO.Game
                     _hero.StoryComplete = true;
                     _hero.RestoreForTown();
                     _playerRepo.SaveGameState(_hero);
+                    EndRunTally("Fell before the throne", always: true);
                     _ui.SetCommandContext("Type anything and press Enter to return to the start screen.");
                     Say("The epilogue is complete.", MessageTone.Dim);
                     return;
@@ -414,6 +420,8 @@ namespace ARDO.Game
                 HandleDefeatStart();
                 return;
             }
+
+            _run?.AddVictory(_combatEngine.LastFoesSlain, _combatEngine.LastXpEarned);
 
             if (_throneFight != WheelEnding.None)
             {
@@ -439,6 +447,7 @@ namespace ARDO.Game
                 Say(text, tone);
             }
 
+            EndRunTally(ending == WheelEnding.SteppedOff ? "Stepped off the wheel" : "Turned the wheel", always: true);
             CurrentState = GameState.GameOver;
             _ui.SetCommandContext("Type anything and press Enter to return to the start screen.");
             Say("The story is complete.", MessageTone.Dim);
@@ -567,6 +576,7 @@ namespace ARDO.Game
             }
 
             _playerRepo.SaveInventoryItem(_hero.CharacterId, item);
+            _run?.AddItem();
             Say($"{intro} {item} ({item.Summary})", item.Rarity.ToTone());
 
             if (_hero.Equipment.IsUpgrade(item))
@@ -685,6 +695,7 @@ namespace ARDO.Game
             }
             else if (outcome.GoHome)
             {
+                _runOutcome = "Turned back";
                 EnterTown();
             }
             else if (outcome.Guardian != null)
@@ -735,7 +746,23 @@ namespace ARDO.Game
             }
 
             _playerRepo.SaveGameState(_hero);
+            _runOutcome = "Floor cleared";
             EnterTown();
+        }
+
+        // Reads out the trip just ended. A trip with nothing in it is skipped, unless it ended in death or an ending.
+        private void EndRunTally(string outcome, bool always = false)
+        {
+            RunTally? run = _run;
+            _run = null;
+            _runOutcome = "Returned to Oakhaven";
+            if (run == null || (!always && run.IsEmpty(_hero)))
+                return;
+
+            foreach ((string text, MessageTone tone) in run.Summary(_hero, outcome))
+            {
+                Say(text, tone);
+            }
         }
 
         // The town description only on arrival; after that, just the choices.
@@ -954,6 +981,7 @@ namespace ARDO.Game
             {
                 _choosingFloor = false;
                 Say("");
+                _run = new RunTally(_hero, "The Sealed Throne");
                 Say("You take the long stair down, past every floor you have already cleared.");
                 BeginEvent(WheelEvents.SealedDoor(_hero));
                 return;
@@ -980,6 +1008,7 @@ namespace ARDO.Game
             _pendingEvent = null;
             _guardianFaced = false;
             _fightingGuardian = false;
+            _run = new RunTally(_hero, quest?.Title ?? $"Floor {_hero.ActiveStoryNode}");
 
             Say("");
             Say(quest != null
@@ -1015,6 +1044,7 @@ namespace ARDO.Game
             _ui.SetCommandContext("Type 1 to rise again in Oakhaven (50 gold), or 2 to erase this hero.");
             Say("");
             Say("You fall to the dungeon floor, breath gone and vision dimming.", MessageTone.Damage);
+            EndRunTally("Fell in the dark", always: true);
             Say("");
             Say("1 Rise again in Oakhaven (50 gold)   2 Let this hero go");
             Say("Letting go erases this hero's save for good.", MessageTone.Warning);
@@ -1072,6 +1102,7 @@ namespace ARDO.Game
             }
 
             _playerRepo.SaveGameState(_hero);
+            _runOutcome = "Fled";
             EnterTown();
         }
 

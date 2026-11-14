@@ -68,6 +68,11 @@ namespace ARDO.Game.Combat
 
         public int GuardiansDefeated { get; private set; }
 
+        // The last won fight's XP and how many foes fell, for the run summary.
+        public int LastXpEarned { get; private set; }
+
+        public int LastFoesSlain { get; private set; }
+
         public CombatEngine(MainGameForm form, IPlayerRepository playerRepo)
         {
             _form = form ?? throw new ArgumentNullException(nameof(form));
@@ -110,6 +115,8 @@ namespace ARDO.Game.Combat
             _quickDrawReady = _player.HasPerk(PerkId.QuickDraw);
             LastActionWasFleeSuccessful = false;
             LastGoldEarned = 0;
+            LastXpEarned = 0;
+            LastFoesSlain = 0;
             GuardiansDefeated = 0;
 
             Say("");
@@ -685,6 +692,8 @@ namespace ARDO.Game.Combat
 
                 _player.Gold += totalGold;
                 LastGoldEarned = totalGold;
+                LastXpEarned = totalXp;
+                LastFoesSlain = _enemies.Count;
                 GuardiansDefeated = _enemies.Count(enemy => enemy.IsGuardian);
 
                 Say($"Rewards earned: +{totalXp} XP | +{totalGold} gold.", MessageTone.Gold);

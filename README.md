@@ -56,6 +56,9 @@ This repository currently reflects the Phase 3 release of the project, including
   +25% again) and Cold Hearths (the inn costs 30 gold). Past Turn 5 the wheel grinds on, +10% health and damage a
   turn. Alhuezo and the shadow already grow with the hero, so they take 40% of each twist. Every turn pays 15% more
   XP and gold, and the load list and stats panel show the hero's turn
+- Run summary: every trip into the dungeon ends with a tally of fights won, foes slain, XP and gold earned,
+  items found and levels gained, plus any first guardian kill or key of the wheel. It shows on the way back to town,
+  on death (before the choice to rise again) and after an ending
 
 ## Screen Recording
 
@@ -108,6 +111,7 @@ When loading a save, choosing `0` returns the player to the main menu.
 - Quest-driven story progression
 - Level-up perks that shape each hero's build
 - Repeatable harder runs after an ending (The Wheel Turns Again)
+- A summary of each dungeon run
 - SQLite save/load support with repository-based data access
 
 ## Extended Features
