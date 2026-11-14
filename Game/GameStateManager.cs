@@ -379,7 +379,7 @@ namespace ARDO.Game
                 case "6":
                 case "talk":
                     _talkInTown = true;
-                    BeginEvent(TownTalk.CommonRoom(_hero, _timesTalked));
+                    BeginEvent(TownTalk.Tavern(_hero, _timesTalked));
                     return;
 
                 case "7":
@@ -724,7 +724,7 @@ namespace ARDO.Game
                 // Another word, or back to the town.
                 if (choice < dungeonEvent.Choices.Count)
                 {
-                    BeginEvent(TownTalk.CommonRoom(_hero, _timesTalked));
+                    BeginEvent(TownTalk.Tavern(_hero, _timesTalked));
                     return;
                 }
 

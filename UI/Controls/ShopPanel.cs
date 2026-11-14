@@ -16,6 +16,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using ARDO.Core.Abstracts;
+using ARDO.UI.Display;
 using ARDO.Core.Entities;
 using ARDO.Core.Enums;
 using ARDO.Core.Factories;
@@ -44,7 +45,7 @@ namespace ARDO.UI.Controls
 
         public event Action<string>? CommandSuggested;
 
-        public string CommandHint => "Shop commands: buy 1, sell 1, sell all, equip 1, unequip 1, exit.";
+        public string CommandHint => "Shop commands: info 1, buy 1, sell 1, sell all, equip 1, unequip 1, exit.";
 
         public ShopPanel(Hero hero, IPlayerRepository playerRepo, Action? refreshStatus = null)
         {
@@ -75,7 +76,7 @@ namespace ARDO.UI.Controls
 
             root.RowStyles.Add(new RowStyle(SizeType.Absolute, 72F));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 76F));
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 112F));
 
             _titleLabel = new Label
             {
@@ -127,7 +128,7 @@ namespace ARDO.UI.Controls
             {
                 List<GameItem> items = _hero.HeroInventory.GetItems();
                 if (index < items.Count)
-                    Suggest($"sell {index + 1}", $"Press Enter to sell {items[index].Name}.");
+                    Suggest($"sell {index + 1}", ItemDetails.Describe(_hero, items[index], $"sells for {Math.Max(1, items[index].Value / 2)}g", "Press Enter to sell."));
             };
 
             _playerGoldLabel = new Label
@@ -169,7 +170,7 @@ namespace ARDO.UI.Controls
             _shopItemsList.RowClicked += index =>
             {
                 if (index < _shopOffers.Count)
-                    Suggest($"buy {index + 1}", $"Press Enter to buy {_shopOffers[index].DisplayName} for {_shopOffers[index].BuyPrice}g.");
+                    Suggest($"buy {index + 1}", OfferDetails(index));
             };
 
             shopPanel.Controls.Add(shopTitle, 0, 0);
@@ -191,7 +192,7 @@ namespace ARDO.UI.Controls
             var shopStatusLabel = new Label
             {
                 Dock = DockStyle.Fill,
-                Text = "Click an item and press Enter, or type a command below.",
+                Text = "Click an item to see what it does for you; Enter buys or sells it.",
                 ForeColor = Color.LightGray,
                 BackColor = Color.Black,
                 Font = new Font("Consolas", 10, FontStyle.Regular),
@@ -205,8 +206,8 @@ namespace ARDO.UI.Controls
                 RowCount = 2,
                 BackColor = Color.Black
             };
-            statusPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 60F));
-            statusPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 40F));
+            statusPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 75F));
+            statusPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
             statusPanel.Controls.Add(_feedbackLabel, 0, 0);
             statusPanel.Controls.Add(shopStatusLabel, 0, 1);
 
@@ -297,6 +298,13 @@ namespace ARDO.UI.Controls
             CommandSuggested?.Invoke(command);
         }
 
+        // What an offer does for this hero, before buying it.
+        private string OfferDetails(int index)
+        {
+            ShopOffer offer = _shopOffers[index];
+            return ItemDetails.Describe(_hero, offer.CreateItem(), $"{offer.BuyPrice}g", "Press Enter to buy.");
+        }
+
         private void AddOffer(int price, Func<GameItem> createItem)
         {
             GameItem sample = createItem();
@@ -323,9 +331,18 @@ namespace ARDO.UI.Controls
             }
 
             string[] parts = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 2 && parts[0].ToLowerInvariant() is "info" or "look")
+            {
+                if (int.TryParse(parts[1], out int shown) && shown >= 1 && shown <= _shopOffers.Count)
+                    ShowFeedback(OfferDetails(shown - 1));
+                else
+                    ShowFeedback($"Type info 1 to {_shopOffers.Count} to look at a shop item.");
+                return;
+            }
+
             if (parts.Length < 2)
             {
-                ShowFeedback("Use buy 1, sell 1, sell all, equip 1, unequip 1, or type exit.");
+                ShowFeedback("Use buy 1, info 1, sell 1, sell all, equip 1, unequip 1, or type exit.");
                 return;
             }
 

@@ -65,7 +65,7 @@ namespace ARDO.UI.Controls
             root.RowStyles.Add(new RowStyle(SizeType.Absolute, 72F));
             root.RowStyles.Add(new RowStyle(SizeType.Absolute, 34F));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 56F));
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 80F));
 
             var title = new Label
             {
@@ -96,7 +96,7 @@ namespace ARDO.UI.Controls
                 GameItem item = items[index];
                 (string verb, string action) = !EquipmentManager.CanEquip(item) ? ("use", "use")
                     : item.IsEquipped ? ("unequip", "take off") : ("equip", "equip");
-                _feedbackLabel.Text = $"Press Enter to {action} {item.Name}.";
+                _feedbackLabel.Text = ItemDetails.Describe(_hero, item, null, $"Press Enter to {action} it.");
                 CommandSuggested?.Invoke($"{verb} {index + 1}");
             };
 

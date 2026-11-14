@@ -4,7 +4,7 @@
  * Project ARDO
  *
  * Class description:
- * `TownTalk.cs` is the inn's common room, where the hero can talk to whoever is
+ * `TownTalk.cs` is the tavern, where the hero can talk to whoever is
     in town. Maren is always there. Eldrin turns up once the hero has reached the
     Emberward Depths, and Sera once they have reached the Hollow Cathedral. Each
     has a few lines that change with the hero's progress; talking again gives the
@@ -19,12 +19,12 @@ namespace ARDO.Game.Events
 {
     public static class TownTalk
     {
-        public const string Title = "THE COMMON ROOM";
+        public const string Title = "THE TAVERN";
 
         private sealed record Speaker(string Key, string Label, IReadOnlyList<string> Lines);
 
         // Talking in town: one choice per person present, then a way back to the town menu.
-        public static DungeonEvent CommonRoom(Hero hero, IDictionary<string, int> timesTalked)
+        public static DungeonEvent Tavern(Hero hero, IDictionary<string, int> timesTalked)
         {
             List<Speaker> present = WhoIsHere(hero).ToList();
             var choices = present
@@ -40,7 +40,7 @@ namespace ARDO.Game.Events
 
             return new DungeonEvent(
                 Title,
-                new[] { present.Count == 1 ? "The common room is quiet. Maren is wiping down the bar." : "The common room is warm and half full. A few faces you know look up." },
+                new[] { present.Count == 1 ? "The tavern is quiet. Maren is wiping down the bar." : "The tavern is warm and half full. A few faces you know look up." },
                 choices);
         }
 

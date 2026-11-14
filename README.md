@@ -70,7 +70,7 @@ This repository currently reflects the Phase 3 release of the project, including
   the deepest tier, with veteran enemies. Turn 1 opens The Robbers' Road and The Banner Halls on the way to Grisk,
   with the Goblin Cutpurse (escapes with your gold if not killed in time), the Goblin Brute and the Goblin Shaman
   (heals the most hurt goblin). Turns 2 to 4 are planned for the Matron, the Witch and the throne
-- Talking in town: option 6 opens the inn's common room. Maren is always there; Eldrin arrives by quest 2 (or once
+- Talking in town: option 6 opens the tavern. Maren is always there; Eldrin arrives by quest 2 (or once
   the hero has helped her as the wounded scout), Sera by quest 3. Each has lines that change with progress
 - Journals: empty rooms on floors 1 to 3 and the deeper roads often hold a journal page that hints at Alhuezo, the
   keys and the door to his throne
