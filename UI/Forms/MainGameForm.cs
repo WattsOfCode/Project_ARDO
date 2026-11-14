@@ -23,7 +23,7 @@ using GameMenu = ARDO.UI.Display.MainMenu;
 
 namespace ARDO.UI.Forms
 {
-    public partial class MainGameForm : Form
+    public partial class MainGameForm : Form, IGameView
     {
         private readonly IPlayerRepository _playerRepo;
         private readonly QuestRepository _questRepo;
@@ -188,7 +188,7 @@ namespace ARDO.UI.Forms
             _quickActions.SetFightMode(_gameState?.InCombat == true);
         }
 
-        internal void ClearNarrative()
+        public void ClearNarrative()
         {
             _narrativePanel.ClearNarrative();
         }
@@ -276,17 +276,17 @@ namespace ARDO.UI.Forms
         }
 
         // Swaps the story for a full screen such as the shop. Opening another one replaces it.
-        public void ShowOverlay<T>(T panel) where T : Control, IOverlayPanel
+        public void ShowOverlay(IOverlayPanel panel)
         {
-            if (panel == null)
-                throw new ArgumentNullException(nameof(panel));
+            if (panel is not Control screen)
+                throw new ArgumentException("An overlay must be a screen control.", nameof(panel));
 
             RemoveOverlay();
 
-            _overlay = panel;
+            _overlay = screen;
             _storyHost.Controls.Remove(_narrativePanel);
-            _storyHost.Controls.Add(panel);
-            panel.BringToFront();
+            _storyHost.Controls.Add(screen);
+            screen.BringToFront();
             panel.CommandSuggested += _inputPanel.SuggestCommand;
             SetCommandContext(panel.CommandHint);
             FocusCommandInput();

@@ -31,7 +31,8 @@ This repository currently reflects the Phase 3 release of the project, including
 - Two new classes: the `Archer` (more crits, Aimed Shot, a Volley that hits every foe, and a Pinning Shot that
   breaks a heavy blow) and the `Rogue` (dodges and flees more often, Backstab, Poison Blade, and Smoke Step)
 - A character creation screen with the four classes side by side; hero names are capped at 16 characters.
-  Hard mode is chosen there too (type `hard`): a hard-mode hero who falls is erased at once
+  Hard mode is chosen there too (type `hard`): a hard-mode hero who falls is erased at once, and carries a
+  small skull badge under their portrait
 - Every new hero sets out with a Wooden Staff (+3 ATK) that breaks after 10 won fights
 - Every level-up offers three perks to choose from, drawn from shared perks and the hero's own class
   (Cleave, Pyromancer, Barbed Arrows, Shadow Dance and more). Type `perks` to see the ones you hold;
@@ -133,6 +134,19 @@ From the title screen, the player can:
 - `3` Exit Application
 
 When loading a save, choosing `0` returns the player to the main menu.
+
+## Project Layout
+
+The code follows a model-view-controller split:
+
+- **Model**: `Core/` (heroes, enemies, items and their contracts) and the game rules in `Game/` (`Combat`,
+  `Enemies`, `Events`, `Inventory`, `Players`, `Progression`, and `Shop`, where the `Merchant` keeps the stock
+  and does the trading)
+- **View**: `UI/` (the windows in `Forms`, the panels and screens in `Controls`, text helpers in `Display`)
+- **Controller**: `GameStateManager` runs the game flow and `CombatEngine` runs a fight. Both talk to the window
+  only through `IGameView`, and both are split by area into partial files (`GameStateManager.Town.cs`,
+  `.Dungeon.cs`, `.Events.cs` and so on; `CombatEngine.PlayerActions.cs`, `.Display.cs`, `.Resolution.cs`)
+- **Data**: `Data/` saves and loads through repositories (`IPlayerRepository`, SQLite underneath)
 
 ## Core Features
 

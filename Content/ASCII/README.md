@@ -21,6 +21,8 @@ Every picture in this folder follows the same rules, so the game looks like one 
 - **Readable at a glance.** Face, hands and the one object that says who they are (bow, parasol, crown)
   must stand out from the body. Raise the contrast inside the figure if the subject is mostly one tone.
 - **Gear pictures** (`Gear/`) are small line drawings and keep their own shapes; the rules above are for portraits.
+- **Badges** (`Badges/`) are tiny marks drawn under a portrait. `Badges/skull.txt` marks a hard-mode hero;
+  replace it with any small picture and it is fitted to the badge.
 
 File names are the enemy's or class's `ArtKey`: `Heroes/<class>.txt`, `Enemies/<ArtKey>.txt`.
 

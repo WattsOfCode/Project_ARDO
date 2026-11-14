@@ -5,9 +5,9 @@
  *
  * Class description:
  * `ShopPanel.cs` is a concrete overlay control that composes the town shop UI 
-    and processes command-based buy/sell actions. It uses public methods, 
-    event callbacks, and repository calls for persistence updates, while CRUD 
-    is still handled through the data layer.
+    and processes command-based buy/sell actions. It uses public methods and
+    event callbacks; the stock and the trading itself are the Merchant's
+    (Game/Shop), and CRUD is still handled through the data layer.
  */
 using System;
 using System.Collections.Generic;
@@ -21,19 +21,15 @@ using ARDO.Core.Entities;
 using ARDO.Core.Enums;
 using ARDO.Core.Factories;
 using ARDO.Data;
-using ARDO.Game.Inventory;
-using ARDO.Game.Players;
+using ARDO.Game.Shop;
 
 namespace ARDO.UI.Controls
 {
     public partial class ShopPanel : UserControl, IOverlayPanel
     {
-        private sealed record ShopOffer(string DisplayName, int BuyPrice, Func<GameItem> CreateItem, string Description);
-
         private readonly Hero _hero;
-        private readonly IPlayerRepository _playerRepo;
+        private readonly Merchant _merchant;
         private readonly Action? _refreshStatus;
-        private readonly List<ShopOffer> _shopOffers = new();
 
         private Label _titleLabel = null!;
         private ItemListBox _playerItemsList = null!;
@@ -50,10 +46,9 @@ namespace ARDO.UI.Controls
         public ShopPanel(Hero hero, IPlayerRepository playerRepo, Action? refreshStatus = null)
         {
             _hero = hero ?? throw new ArgumentNullException(nameof(hero));
-            _playerRepo = playerRepo ?? throw new ArgumentNullException(nameof(playerRepo));
+            _merchant = new Merchant(hero, playerRepo ?? throw new ArgumentNullException(nameof(playerRepo)));
             _refreshStatus = refreshStatus;
 
-            BuildStock();
             BuildInterface();
             RefreshView();
         }
@@ -128,7 +123,7 @@ namespace ARDO.UI.Controls
             {
                 List<GameItem> items = _hero.HeroInventory.GetItems();
                 if (index < items.Count)
-                    Suggest($"sell {index + 1}", ItemDetails.Describe(_hero, items[index], $"sells for {Math.Max(1, items[index].Value / 2)}g", "Press Enter to sell."));
+                    Suggest($"sell {index + 1}", ItemDetails.Describe(_hero, items[index], $"sells for {Merchant.SalePrice(items[index])}g", "Press Enter to sell."));
             };
 
             _playerGoldLabel = new Label
@@ -169,7 +164,7 @@ namespace ARDO.UI.Controls
             _shopItemsList = new ItemListBox();
             _shopItemsList.RowClicked += index =>
             {
-                if (index < _shopOffers.Count)
+                if (index < _merchant.Offers.Count)
                     Suggest($"buy {index + 1}", OfferDetails(index));
             };
 
@@ -218,80 +213,7 @@ namespace ARDO.UI.Controls
             Controls.Add(root);
         }
 
-        // The merchant restocks as the hero goes deeper: each cleared floor adds better gear.
-        private void BuildStock()
-        {
-            int floor = _hero.ActiveStoryNode;
-
-            AddOffer(30, ItemFactory.CreateHealthPotion);
-            AddOffer(12, ItemFactory.CreateTravelRation);
-            if (_hero is Mage)
-            {
-                AddOffer(30, ItemFactory.CreateManaDraught);
-            }
-
-            AddOffer(45, () => ClassWeapon(
-                ("Iron Blade", "A sturdy blade from the Oakhaven merchant."),
-                ("Ashwood Staff", "A plain staff, worn smooth by an apprentice's grip."),
-                ("Hunter's Shortbow", "Yew and gut string. It has fed a family or two."),
-                ("Twin Iron Daggers", "A matched pair, balanced for throwing or worse."),
-                RarityType.Common, 45, 10));
-            AddOffer(35, () => new Armor("Reinforced Mail", "Armor fit for the next descent.", RarityType.Common, 35, 5, EquipmentSlot.Chest));
-            AddOffer(20, () => new Armor("Leather Cap", "Better than nothing between you and a falling rock.", RarityType.Common, 20, 2, EquipmentSlot.Helmet));
-            AddOffer(30, () => new Armor("Oak Buckler", "A round shield, iron at the rim.", RarityType.Common, 30, 3, EquipmentSlot.Shield));
-            AddOffer(20, () => new Armor("Traveler's Boots", "Broken in on the road to Oakhaven.", RarityType.Common, 20, 2, EquipmentSlot.Boots));
-            AddOffer(25, () => new Armor("Copper Ring", "A plain band the merchant swears is lucky.", RarityType.Common, 25, 1, EquipmentSlot.Ring));
-
-            if (floor >= 2)
-            {
-                AddOffer(110, () => ClassWeapon(
-                    ("Emberforged Sword", "Still warm from the depths' forges."),
-                    ("Cinder Staff", "An ember burns in its crown and never goes out."),
-                    ("Emberstring Longbow", "The string glows faintly when drawn."),
-                    ("Cinder Fangs", "Two curved blades that never quite cool."),
-                    RarityType.Uncommon, 110, 16));
-                AddOffer(90, () => new Armor("Ashen Plate", "Plate scorched black in the Emberward.", RarityType.Uncommon, 90, 9, EquipmentSlot.Chest));
-                AddOffer(60, () => new Armor("Ashen Helm", "Soot still in the visor slits.", RarityType.Uncommon, 60, 4, EquipmentSlot.Helmet));
-                AddOffer(75, () => new Armor("Emberward Kite Shield", "Tall enough to hide behind.", RarityType.Uncommon, 75, 6, EquipmentSlot.Shield));
-            }
-
-            if (floor >= 3)
-            {
-                AddOffer(55, ItemFactory.CreateGreaterHealthPotion);
-                AddOffer(180, () => ClassWeapon(
-                    ("Hallowed Greatblade", "Blessed in the Hollow Cathedral, before the fall."),
-                    ("Hallowed Crozier", "A cathedral staff that still remembers its prayers."),
-                    ("Hallowed Warbow", "Cut from a cathedral rafter. Its arrows find the gaps."),
-                    ("Vesper Stilettos", "Thin as a prayer, and quieter."),
-                    RarityType.Rare, 180, 22, ItemEffect.Keen));
-                AddOffer(160, () => new Armor("Cathedral Ward", "Vestments that turn the first blow aside.", RarityType.Rare, 160, 13, EquipmentSlot.Chest, ItemEffect.Warded));
-                AddOffer(170, () => new Armor("Cathedral Bulwark", "A tower shield from the cathedral gates.", RarityType.Rare, 170, 8, EquipmentSlot.Shield, ItemEffect.Bulwark));
-                AddOffer(140, () => new Armor("Pilgrim's Striders", "Boots for those who know when to leave.", RarityType.Rare, 140, 5, EquipmentSlot.Boots, ItemEffect.Swift));
-                AddOffer(150, () => new Armor("Signet of the Keen", "The seal of a dead order of duelists.", RarityType.Rare, 150, 3, EquipmentSlot.Ring, ItemEffect.Keen));
-            }
-        }
-
-        // Each class is offered its own weapon (blade, staff, bow or daggers) at the same price and power.
-        private Weapon ClassWeapon(
-            (string Name, string Description) blade,
-            (string Name, string Description) staff,
-            (string Name, string Description) bow,
-            (string Name, string Description) daggers,
-            RarityType rarity, int value, int damage, ItemEffect effect = ItemEffect.None)
-        {
-            (string name, string description) = _hero switch
-            {
-                Mage => staff,
-                Archer => bow,
-                Rogue => daggers,
-                _ => blade
-            };
-            return new Weapon(name, description, rarity, value, damage, effect);
-        }
-
         // A click puts the command in the box; Enter runs it.
-        private static string Items(int count) => count == 1 ? "1 item" : $"{count} items";
-
         private void Suggest(string command, string message)
         {
             _feedbackLabel.Text = message;
@@ -301,14 +223,8 @@ namespace ARDO.UI.Controls
         // What an offer does for this hero, before buying it.
         private string OfferDetails(int index)
         {
-            ShopOffer offer = _shopOffers[index];
+            ShopOffer offer = _merchant.Offers[index];
             return ItemDetails.Describe(_hero, offer.CreateItem(), $"{offer.BuyPrice}g", "Press Enter to buy.");
-        }
-
-        private void AddOffer(int price, Func<GameItem> createItem)
-        {
-            GameItem sample = createItem();
-            _shopOffers.Add(new ShopOffer(sample.Name, price, createItem, sample.Summary));
         }
 
         public void ProcessCommand(string command)
@@ -317,6 +233,7 @@ namespace ARDO.UI.Controls
                 return;
 
             string input = command.Trim();
+            int offerCount = _merchant.Offers.Count;
 
             if (input.Equals("exit", StringComparison.OrdinalIgnoreCase))
             {
@@ -326,17 +243,17 @@ namespace ARDO.UI.Controls
 
             if (input.Equals("sell all", StringComparison.OrdinalIgnoreCase) || input.Equals("sellall", StringComparison.OrdinalIgnoreCase))
             {
-                SellAllItems();
+                Trade(_merchant.SellAll, "The shop could not complete the bulk sale right now.");
                 return;
             }
 
             string[] parts = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 2 && parts[0].ToLowerInvariant() is "info" or "look")
             {
-                if (int.TryParse(parts[1], out int shown) && shown >= 1 && shown <= _shopOffers.Count)
+                if (int.TryParse(parts[1], out int shown) && shown >= 1 && shown <= offerCount)
                     ShowFeedback(OfferDetails(shown - 1));
                 else
-                    ShowFeedback($"Type info 1 to {_shopOffers.Count} to look at a shop item.");
+                    ShowFeedback($"Type info 1 to {offerCount} to look at a shop item.");
                 return;
             }
 
@@ -358,19 +275,19 @@ namespace ARDO.UI.Controls
             {
                 case "buy":
                 case "b":
-                    BuyItem(selection);
+                    Trade(() => _merchant.Buy(selection), "The shop could not complete that purchase right now.");
                     break;
                 case "sell":
                 case "s":
-                    SellItem(selection);
+                    Trade(() => _merchant.Sell(selection), "The shop could not complete that sale right now.");
                     break;
                 case "equip":
                 case "e":
-                    EquipItem(selection);
+                    Trade(() => _merchant.Equip(selection), "That item could not be equipped right now.");
                     break;
                 case "unequip":
                 case "u":
-                    UnequipItem(selection);
+                    Trade(() => _merchant.Unequip(selection), "That item could not be unequipped right now.");
                     break;
                 default:
                     ShowFeedback("Unknown command. Use buy 1, sell 1, sell all, equip 1, unequip 1, or exit.");
@@ -378,204 +295,20 @@ namespace ARDO.UI.Controls
             }
         }
 
-        private void BuyItem(int selection)
+        // Runs one of the merchant's actions, then shows its answer and the hero's new totals.
+        private void Trade(Func<string> action, string failure)
         {
             try
             {
-                if (selection < 1 || selection > _shopOffers.Count)
-                {
-                    ShowFeedback($"Choose a shop item from 1 to {_shopOffers.Count}.");
-                    return;
-                }
-
-                ShopOffer offer = _shopOffers[selection - 1];
-                if (_hero.Gold < offer.BuyPrice)
-                {
-                    ShowFeedback("You do not have enough gold for that purchase.");
-                    return;
-                }
-
-                GameItem item = offer.CreateItem();
-                if (!_hero.HeroInventory.AddItem(item))
-                {
-                    ShowFeedback("Your pack is full.");
-                    return;
-                }
-
-                _hero.Gold -= offer.BuyPrice;
-                _playerRepo.SaveInventoryItem(_hero.CharacterId, item);
-
-                bool equipped = false;
-                if (_hero.Equipment.IsUpgrade(item))
-                {
-                    _hero.Equipment.Equip(item);
-                    _playerRepo.SaveEquipment(_hero);
-                    equipped = true;
-                }
-
-                _playerRepo.SaveGameState(_hero);
+                string message = action();
                 _refreshStatus?.Invoke();
-                ShowFeedback(equipped
-                    ? $"Bought {item.Name} for {offer.BuyPrice} gold and equipped it."
-                    : $"Bought {item.Name} for {offer.BuyPrice} gold.");
+                ShowFeedback(message);
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[ARDO][ShopPanel] BuyItem failed: {ex}");
-                ShowFeedback("The shop could not complete that purchase right now.");
+                Debug.WriteLine($"[ARDO][ShopPanel] {failure} {ex}");
+                ShowFeedback(failure);
             }
-        }
-
-        private void SellItem(int selection)
-        {
-            try
-            {
-                List<GameItem> items = _hero.HeroInventory.GetItems();
-                if (items.Count == 0)
-                {
-                    ShowFeedback("You have nothing to sell.");
-                    return;
-                }
-
-                if (selection < 1 || selection > items.Count)
-                {
-                    ShowFeedback($"Choose a player item from 1 to {items.Count}.");
-                    return;
-                }
-
-                GameItem item = items[selection - 1];
-                if (item.IsEquipped)
-                {
-                    ShowFeedback($"Unequip that item first: unequip {selection}.");
-                    return;
-                }
-
-                int saleValue = Math.Max(1, item.Value / 2);
-                _hero.HeroInventory.RemoveItem(item);
-                _playerRepo.RemoveInventoryItem(_hero.CharacterId, item.ItemId);
-                _hero.Gold += saleValue;
-                _playerRepo.SaveGameState(_hero);
-                _refreshStatus?.Invoke();
-                ShowFeedback($"Sold {item.Name} for {saleValue} gold.");
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[ARDO][ShopPanel] SellItem failed: {ex}");
-                ShowFeedback("The shop could not complete that sale right now.");
-            }
-        }
-
-        private void SellAllItems()
-        {
-            try
-            {
-                List<GameItem> items = _hero.HeroInventory.GetItems();
-                if (items.Count == 0)
-                {
-                    ShowFeedback("You have nothing to sell.");
-                    return;
-                }
-
-                int soldCount = 0;
-                int totalGold = 0;
-                int skippedEquipped = 0;
-
-                foreach (GameItem item in items.ToList())
-                {
-                    if (item.IsEquipped)
-                    {
-                        skippedEquipped++;
-                        continue;
-                    }
-
-                    int saleValue = Math.Max(1, item.Value / 2);
-                    _hero.HeroInventory.RemoveItem(item);
-                    _playerRepo.RemoveInventoryItem(_hero.CharacterId, item.ItemId);
-                    _hero.Gold += saleValue;
-                    totalGold += saleValue;
-                    soldCount++;
-                }
-
-                if (soldCount == 0)
-                {
-                    ShowFeedback("Only equipped items are left. Unequip one first to sell it.");
-                    return;
-                }
-
-                _playerRepo.SaveGameState(_hero);
-                _refreshStatus?.Invoke();
-
-                if (skippedEquipped > 0)
-                {
-                    ShowFeedback($"Sold {Items(soldCount)} for {totalGold} gold. Kept {Items(skippedEquipped)} you are wearing.");
-                }
-                else
-                {
-                    ShowFeedback($"Sold {Items(soldCount)} for {totalGold} gold.");
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[ARDO][ShopPanel] SellAllItems failed: {ex}");
-                ShowFeedback("The shop could not complete the bulk sale right now.");
-            }
-        }
-
-        private void EquipItem(int selection)
-        {
-            GameItem? item = GetPlayerItem(selection);
-            if (item == null)
-                return;
-
-            if (!EquipmentManager.CanEquip(item))
-            {
-                ShowFeedback($"{item.Name} can't be equipped. Only weapons and armor can.");
-                return;
-            }
-
-            if (item.IsEquipped)
-            {
-                ShowFeedback($"{item.Name} is already equipped.");
-                return;
-            }
-
-            GameItem? replaced = _hero.Equipment.Equip(item);
-            _playerRepo.SaveEquipment(_hero);
-            _refreshStatus?.Invoke();
-            ShowFeedback(replaced != null
-                ? $"Equipped {item.Name} in place of {replaced.Name}."
-                : $"Equipped {item.Name}.");
-        }
-
-        private void UnequipItem(int selection)
-        {
-            GameItem? item = GetPlayerItem(selection);
-            if (item == null)
-                return;
-
-            if (!_hero.Equipment.Unequip(item))
-            {
-                ShowFeedback($"{item.Name} isn't equipped.");
-                return;
-            }
-
-            _playerRepo.SaveEquipment(_hero);
-            _refreshStatus?.Invoke();
-            ShowFeedback($"Unequipped {item.Name}.");
-        }
-
-        private GameItem? GetPlayerItem(int selection)
-        {
-            List<GameItem> items = _hero.HeroInventory.GetItems();
-            if (selection < 1 || selection > items.Count)
-            {
-                ShowFeedback(items.Count == 0
-                    ? "You have no items."
-                    : $"Choose a player item from 1 to {items.Count}.");
-                return null;
-            }
-
-            return items[selection - 1];
         }
 
         private void RefreshView()
@@ -603,9 +336,9 @@ namespace ARDO.UI.Controls
 
             _shopItemsList.BeginUpdate();
             _shopItemsList.Items.Clear();
-            for (int i = 0; i < _shopOffers.Count; i++)
+            for (int i = 0; i < _merchant.Offers.Count; i++)
             {
-                ShopOffer offer = _shopOffers[i];
+                ShopOffer offer = _merchant.Offers[i];
                 _shopItemsList.AddLine($"{i + 1}. {offer.DisplayName} - {offer.BuyPrice}g ({offer.Description})", Color.LightSkyBlue);
             }
             _shopItemsList.EndUpdate();
