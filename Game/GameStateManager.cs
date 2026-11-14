@@ -52,17 +52,15 @@ namespace ARDO.Game
         private int _introShownForQuest;
         private bool _choosingFloor;
 
-        // Perks earned before reaching town (or by an old save) are chosen there, then the town menu follows.
-        private bool _perkPickInTown;
-
         // After the story: which throne fight is on (if any), and whether this run already offered its hidden key.
         private WheelEnding _throneFight;
 
-        // The "turn the wheel again" prompt is open in town.
-        private bool _wheelChoiceInTown;
+        // A town prompt that is open (perks, the tavern or the wheel), so its answer leads back to town.
+        // Perks earned before reaching town (or by an old save) are chosen there, then the town menu follows.
+        private enum TownPrompt { None, Perks, Talk, Wheel }
+        private TownPrompt _townPrompt;
 
-        // Talking in the common room, and how often each person has been talked to this session.
-        private bool _talkInTown;
+        // How often each person in the tavern has been talked to this session.
         private readonly Dictionary<string, int> _timesTalked = new();
         private bool _keyOfferedThisRun;
         private bool _keyRumorShown;
@@ -154,8 +152,7 @@ namespace ARDO.Game
             _fightingGuardian = false;
             _activeEvent = null;
             _choosingFloor = false;
-            _perkPickInTown = false;
-            _wheelChoiceInTown = false;
+            _townPrompt = TownPrompt.None;
             _throneFight = WheelEnding.None;
             _keyOfferedThisRun = false;
             _hero.EndDungeonRun();
@@ -217,7 +214,7 @@ namespace ARDO.Game
         {
             if (_hero.PendingPerkPicks > 0)
             {
-                _perkPickInTown = true;
+                _townPrompt = TownPrompt.Perks;
                 BeginEvent(PerkEvents.Choose(_hero));
                 return;
             }
@@ -378,7 +375,7 @@ namespace ARDO.Game
 
                 case "6":
                 case "talk":
-                    _talkInTown = true;
+                    _townPrompt = TownPrompt.Talk;
                     BeginEvent(TownTalk.Tavern(_hero, _timesTalked));
                     return;
 
@@ -388,7 +385,7 @@ namespace ARDO.Game
                     if (_hero.WheelEnding == WheelEnding.None)
                         break;
 
-                    _wheelChoiceInTown = true;
+                    _townPrompt = TownPrompt.Wheel;
                     BeginEvent(WheelEvents.TurnAgain(_hero));
                     return;
 
@@ -719,7 +716,7 @@ namespace ARDO.Game
             _playerRepo.SaveGameState(_hero);
             _ui.UpdateVisualMetricsDisplay();
 
-            if (_talkInTown)
+            if (_townPrompt == TownPrompt.Talk)
             {
                 // Another word, or back to the town.
                 if (choice < dungeonEvent.Choices.Count)
@@ -728,15 +725,15 @@ namespace ARDO.Game
                     return;
                 }
 
-                _talkInTown = false;
+                _townPrompt = TownPrompt.None;
                 CurrentState = GameState.Town;
                 ShowTownMenu(arriving: false);
                 return;
             }
 
-            if (_wheelChoiceInTown)
+            if (_townPrompt == TownPrompt.Wheel)
             {
-                _wheelChoiceInTown = false;
+                _townPrompt = TownPrompt.None;
                 if (_hero.WheelEnding == WheelEnding.None)
                 {
                     // Turned: arrive fresh, so Maren tells of the keys again.
@@ -750,7 +747,7 @@ namespace ARDO.Game
                 return;
             }
 
-            if (_perkPickInTown)
+            if (_townPrompt == TownPrompt.Perks)
             {
                 if (_hero.PendingPerkPicks > 0)
                 {
@@ -758,7 +755,7 @@ namespace ARDO.Game
                     return;
                 }
 
-                _perkPickInTown = false;
+                _townPrompt = TownPrompt.None;
                 CurrentState = GameState.Town;
                 ShowTownMenu();
                 return;

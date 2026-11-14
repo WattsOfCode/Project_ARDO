@@ -26,59 +26,75 @@ This repository currently reflects the Phase 3 release of the project, including
 
 ## Since Phase 3
 
-- Inventory and Gear screens, opened with `i` / `g` or the buttons in the bottom-right corner
-- Six gear slots (weapon, helmet, chest, shield, boots, ring) shown on an ASCII figure, holding each class's own weapon
+### Heroes and controls
+
 - Two new classes: the `Archer` (more crits, Aimed Shot, a Volley that hits every foe, and a Pinning Shot that
   breaks a heavy blow) and the `Rogue` (dodges and flees more often, Backstab, Poison Blade, and Smoke Step)
-- The shop sells each class its own weapon (blade, staff, bow or daggers) at the same price and power
-- A character creation screen with the four classes side by side; hero names are capped at 16 characters
-- Click a menu option, list row, enemy or class card to fill in its command, then press Enter
-- Attack, Special, Flee and Item buttons during a fight, plus Esc, command history (Up / Down) and PageUp / PageDown
-- A hero who reaches the epilogue is marked on the load list as fallen to the God-King. They can still be loaded and pick floor 1, 2 or 3 from the dungeon, but the throne is sealed to them
-- After the epilogue, three keys of the wheel are hidden on floors 1 to 3. With all three, the sealed throne opens
-  for a rematch with Alhuezo that can be won, and the wheel turns forward. A rogue can instead pick the door's
-  servant lock and fight their own shadow for a second ending. The load list shows which ending each hero reached
-- Saves from earlier versions open with the new classes available; nothing in them is lost
-- Between fights the passage forks left and right, each way with a hint of what lies down it. Most lead to the
-  next fight; some to an event, or to a door. Behind a door is a treasure chest (sometimes trapped, sometimes
-  guarded) or an empty room to catch your breath. A rogue can pick a chest's lock and skip the trap
+- A character creation screen with the four classes side by side; hero names are capped at 16 characters.
+  Hard mode is chosen there too (type `hard`): a hard-mode hero who falls is erased at once
+- Every new hero sets out with a Wooden Staff (+3 ATK) that breaks after 10 won fights
 - Every level-up offers three perks to choose from, drawn from shared perks and the hero's own class
   (Cleave, Pyromancer, Barbed Arrows, Shadow Dance and more). Type `perks` to see the ones you hold;
   heroes from older saves get one to choose for every level they had already earned
+- Click a menu option, list row, enemy or class card to fill in its command, then press Enter
+- Attack, Special, Flee and Item buttons during a fight, plus Esc, command history (Up / Down) and PageUp / PageDown
+- Quick guide: type `help` or `?` anywhere for the controls
+
+### Gear and the shop
+
+- Inventory and Gear screens, opened with `i` / `g` or the buttons in the bottom-right corner
+- Six gear slots (weapon, helmet, chest, shield, boots, ring) shown on an ASCII figure, holding each class's own weapon
+- The shop sells each class its own weapon (blade, staff, bow or daggers) at the same price and power
+- Clicking an item in the shop or pack (or `info 3` in the shop) shows its name, its description and what it
+  does, compared with what the hero wears in that slot now
+- Full pack: a better find replaces the least valuable item carried; a worse one is left behind
+
+### The dungeon
+
+- Between fights the passage forks left and right, each way with a hint of what lies down it. Most lead to the
+  next fight; some to an event, or to a door. Behind a door is a treasure chest (sometimes trapped, sometimes
+  guarded) or an empty room to catch your breath. A rogue can pick a chest's lock and skip the trap
+- Empty rooms on floors 1 to 3 and the deeper roads often hold a journal page that hints at Alhuezo, the
+  keys and the door to his throne
 - Every floor ends at its guardian, each with a fight of its own: Grisk, the Goblin King calls in lackeys who
   scatter when he falls; the Cinder Matron is healed by fire and looses a Firestorm every third turn; the Raven Witch
   drinks from every wound, turns blows aside with her parasol, and calls down her ravens when badly hurt.
   The first kill of each leaves an Epic trophy, and a hero can turn back before the fight, leaving the floor uncleared
-- The Wheel Turns Again: after either ending, option 6 in town turns the wheel once more. The hero keeps their level,
+- Run summary: every trip into the dungeon ends with a tally of fights won, foes slain, XP and gold earned,
+  items found and levels gained, plus any first guardian kill or key of the wheel. It shows on the way back to town,
+  on death (before the choice to rise again) and after an ending
+- Defeat screen: a fallen hero chooses between two cards, Rise Again (50 gold) or Start a New Hero, which erases
+  the save after a second confirmation and opens the new-hero screen. The run summary shows underneath
+
+### The throne and the wheel
+
+- A hero who reaches the epilogue is marked on the load list as fallen to Alhuezo. They can still be loaded and
+  pick any open floor from the dungeon, but the throne is sealed to them
+- After the epilogue, three keys of the wheel are hidden on floors 1 to 3. With all three, the sealed throne opens
+  for a rematch with Alhuezo that can be won, and the wheel turns forward. A rogue can instead pick the door's
+  servant lock and fight their own shadow for a second ending. The load list shows which ending each hero reached
+- The Wheel Turns Again: after either ending, option 7 in town turns the wheel once more. The hero keeps their level,
   gear, gold and perks; the keys scatter and the guardians rise (with their Epic trophies) for another way to the
   throne. Each turn keeps every twist before it and adds one: Bloodied Stone (enemies +25% health), Sharper Teeth
   (+20% damage), The Crowded Dark (fights often bring one more foe), Wrathful Guardians (guardians and throne foes
   +25% again) and Cold Hearths (the inn costs 30 gold). Past Turn 5 the wheel grinds on, +10% health and damage a
   turn. Alhuezo and the shadow already grow with the hero, so they take 40% of each twist. Every turn pays 15% more
   XP and gold, and the load list and stats panel show the hero's turn
-- Run summary: every trip into the dungeon ends with a tally of fights won, foes slain, XP and gold earned,
-  items found and levels gained, plus any first guardian kill or key of the wheel. It shows on the way back to town,
-  on death (before the choice to rise again) and after an ending
 - Guardians' second phase: from Turn 2 of the wheel, each floor guardian changes how it fights below half health.
   Grisk puts on a gilded ward that soaks blows and grows with every coin he taxes; the Cinder Matron breaks the
   floor open, and the magma burns the hero (through armor and dodges) a little hotter every round; the Raven Witch
   goes to mist behind three ravens, and no blow reaches her while they live and feed her. The approach warns of it
-- Defeat screen: a fallen hero chooses between two cards, Rise Again (50 gold) or Start a New Hero, which erases
-  the save after a second confirmation and opens the new-hero screen. The run summary shows underneath
 - Deeper roads: each turn of the wheel opens two travel floors on the road to one boss, listed before the floor they
   lead to and picked by label (1a, 1b). They have no guardian or key, just longer runs of fights, forks and events at
   the deepest tier, with veteran enemies. Turn 1 opens The Robbers' Road and The Banner Halls on the way to Grisk,
   with the Goblin Cutpurse (escapes with your gold if not killed in time), the Goblin Brute and the Goblin Shaman
   (heals the most hurt goblin). Turns 2 to 4 are planned for the Matron, the Witch and the throne
+
+### Town
+
 - Talking in town: option 6 opens the tavern. Maren is always there; Eldrin arrives by quest 2 (or once
   the hero has helped her as the wounded scout), Sera by quest 3. Each has lines that change with progress
-- Journals: empty rooms on floors 1 to 3 and the deeper roads often hold a journal page that hints at Alhuezo, the
-  keys and the door to his throne
-- Starting staff: every new hero sets out with a Wooden Staff (+3 ATK) that breaks after 10 won fights
-- Full pack: a better find replaces the least valuable item carried; a worse one is left behind
-- Hard mode: chosen on the creation screen (type hard). A hard-mode hero who falls is erased at once
-- Quick guide: type help or ? anywhere for the controls
-- Town option 7 turns the wheel (it was 6)
+- Saves from earlier versions open with the new classes available; nothing in them is lost
 
 ## Screen Recording
 
@@ -144,8 +160,8 @@ When loading a save, choosing `0` returns the player to the main menu.
 - In-shop gold updates in real time after buying or selling
 - Item-use flow that supports `0`, `back`, or `cancel` to back out
 - Combat command prompts that switch context based on the current game state
-- Defeat prompt that lets the player rise again in Oakhaven for 50 gold, or let the hero go
-- Letting the hero go (`2`) deletes that save profile and returns the player to the main menu
+- Defeat screen that lets the player rise again in Oakhaven for 50 gold, or let the hero go
+- Letting the hero go deletes that save profile and opens the new-hero screen
 - Database initialization and schema migration support
 - Self-contained Windows publish output for standalone launch
 
