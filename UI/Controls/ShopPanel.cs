@@ -181,7 +181,7 @@ namespace ARDO.UI.Controls
             _feedbackLabel = new Label
             {
                 Dock = DockStyle.Fill,
-                Text = "Shop is open. Commands: buy 1, sell 1, sell all, equip 1, unequip 1, exit.",
+                Text = "[Merchant] Alexander: \"Well met, adventurer! We have new wares. Take a gander at my new curios.\"",
                 ForeColor = Color.WhiteSmoke,
                 BackColor = Color.Black,
                 Font = new Font("Consolas", 11, FontStyle.Regular),

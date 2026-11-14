@@ -967,6 +967,11 @@ namespace ARDO.Game
 
             _keyRumorShown = true;
             Say("");
+
+            // On a new turn of the wheel she has noticed the dark stirring before she gets to the keys.
+            if (_hero.WheelTurn > 0)
+                Say("[Inn Keeper] Maren: \"The monsters seem to be getting more riled up in the depths. I wonder what's going on.\"", MessageTone.Dim);
+
             string rumor = _hero.HasAllWheelKeys
                 ? "Three keys, and you found every one. Whatever they were made to open, it is waiting on you now."
                 : "Old miners swear there are three keys lost down there, one on each floor. If you go looking, look where the dead keep things.";
