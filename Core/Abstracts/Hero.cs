@@ -36,6 +36,19 @@ namespace ARDO.Core.Abstracts
         public EquipmentManager Equipment { get; set; }
         public int ActiveStoryNode { get; set; } = 1;
 
+        // Hard mode: no rising again. A fallen hero is gone for good.
+        public bool HardMode { get; set; }
+
+        // Good turns done for the townsfolk, one bit each; they remember them in town.
+        public int Deeds { get; set; }
+
+        public const int DeedHelpedEldrin = 1;
+
+        public bool HasDeed(int deed) => (Deeds & deed) != 0;
+
+        // How strong the current floor is (a deep travel floor counts as the deepest).
+        public int FloorTier => FloorTiers.Of(ActiveStoryNode);
+
         // True once the hero has reached the epilogue; their story is over.
         public bool StoryComplete { get; set; }
 
@@ -174,7 +187,7 @@ namespace ARDO.Core.Abstracts
             switch (Equipment.EquippedWeapon?.Effect)
             {
                 case ItemEffect.Burning when target.IsAlive:
-                    target.Burn.Apply(3, 3 + ActiveStoryNode);
+                    target.Burn.Apply(3, 3 + FloorTier);
                     notes = $"{target.Name} catches fire.";
                     break;
 

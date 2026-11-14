@@ -91,7 +91,8 @@ namespace ARDO.Game.Combat
 
             foreach (Enemy enemy in _enemies)
             {
-                enemy.CombatFloor = _player.ActiveStoryNode;
+                enemy.CombatFloor = _player.FloorTier;
+                enemy.Allies = _enemies;
 
                 // The scripted first meeting with Alhuezo is a story beat, not a fight to scale.
                 if (enemy is not Alhuezo { IsScripted: true })
@@ -128,8 +129,9 @@ namespace ARDO.Game.Combat
             if (_isFinalBossEncounter)
             {
                 Say("The deepest chamber hushes around you.");
-                Say("Somewhere beyond the dark, Alhuezo, the God-King, waits with patient certainty.");
+                Say("Somewhere beyond the dark, Alhuezo waits with patient certainty.");
                 Say("This is not just another fight. It is the end of the road you have been walking.");
+                Say("Every story about this throne ends the same way. You will not win today, and that is not the end of your story.", MessageTone.Dim);
             }
             else if (_enemies.Any(enemy => enemy is Alhuezo))
             {
@@ -278,7 +280,8 @@ namespace ARDO.Game.Combat
             {
                 foreach (Enemy called in caller.TakeSummons())
                 {
-                    called.CombatFloor = _player.ActiveStoryNode;
+                    called.CombatFloor = _player.FloorTier;
+                    called.Allies = _enemies;
                     WheelTurns.Strengthen(called, _player.WheelTurn);
                     _enemies.Add(called);
                 }
@@ -430,7 +433,7 @@ namespace ARDO.Game.Combat
 
             if (_isFinalBossEncounter)
             {
-                Say("The God-King will not die quickly. Your blows only begin the story.", MessageTone.Dim);
+                Say("Alhuezo will not die quickly. Your blows only begin the story.", MessageTone.Dim);
             }
         }
 
@@ -719,7 +722,7 @@ namespace ARDO.Game.Combat
             EndCombat();
         }
 
-        // The God-King's first fight is a scripted loss: two rounds of pressure, then the epilogue.
+        // Alhuezo's first fight is a scripted loss: two rounds of pressure, then the epilogue.
         private void ResolveFinalBossTurn(Enemy boss)
         {
             _finalBossRounds++;
@@ -732,7 +735,7 @@ namespace ARDO.Game.Combat
             if (_finalBossRounds <= FinalBossScriptedRounds)
             {
                 Say("");
-                Say($"[Phase {_finalBossRounds}] The God-King answers your strike with cold amusement.", MessageTone.Warning);
+                Say($"[Phase {_finalBossRounds}] Alhuezo answers your strike with cold amusement.", MessageTone.Warning);
                 Say("Your attack lands. The throne does not move.");
 
                 int pressureDamage = Math.Max(1, boss.BaseDamage / 3);
@@ -740,7 +743,7 @@ namespace ARDO.Game.Combat
                 if (_player.CurrentHealth <= 0)
                 {
                     _player.CurrentHealth = 1;
-                    Say("You stumble, but the God-King lets you keep breathing a little longer.", MessageTone.Damage);
+                    Say("You stumble, but Alhuezo lets you keep breathing a little longer.", MessageTone.Damage);
                 }
 
                 Say($"The room shudders under a smaller, patient strike. You endure with {_player.CurrentHealth} HP remaining.", MessageTone.Damage);

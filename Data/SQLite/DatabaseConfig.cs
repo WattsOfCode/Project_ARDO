@@ -97,6 +97,7 @@ namespace ARDO.Data.SQLite
                         equipment_slot TEXT NOT NULL DEFAULT 'None',
                         is_equipped INTEGER NOT NULL DEFAULT 0 CHECK(is_equipped IN (0, 1)),
                         item_effect TEXT NOT NULL DEFAULT 'None',
+                        uses_left INTEGER NOT NULL DEFAULT 0,
                         FOREIGN KEY (character_id) REFERENCES characters(character_id) ON DELETE CASCADE
                     );");
 
@@ -105,12 +106,15 @@ namespace ARDO.Data.SQLite
                 EnsureColumnExists(connection, transaction, "inventory_items", "item_value", "INTEGER NOT NULL DEFAULT 0");
                 EnsureColumnExists(connection, transaction, "inventory_items", "equipment_slot", "TEXT NOT NULL DEFAULT 'None'");
                 EnsureColumnExists(connection, transaction, "inventory_items", "item_effect", "TEXT NOT NULL DEFAULT 'None'");
+                EnsureColumnExists(connection, transaction, "inventory_items", "uses_left", "INTEGER NOT NULL DEFAULT 0");
                 EnsureColumnExists(connection, transaction, "characters", "story_complete", "INTEGER NOT NULL DEFAULT 0");
                 EnsureColumnExists(connection, transaction, "characters", "wheel_keys", "INTEGER NOT NULL DEFAULT 0");
                 EnsureColumnExists(connection, transaction, "characters", "wheel_ending", "INTEGER NOT NULL DEFAULT 0");
                 EnsureColumnExists(connection, transaction, "characters", "perks", "TEXT NOT NULL DEFAULT ''");
                 EnsureColumnExists(connection, transaction, "characters", "guardians_slain", "INTEGER NOT NULL DEFAULT 0");
                 EnsureColumnExists(connection, transaction, "characters", "wheel_turn", "INTEGER NOT NULL DEFAULT 0");
+                EnsureColumnExists(connection, transaction, "characters", "hard_mode", "INTEGER NOT NULL DEFAULT 0");
+                EnsureColumnExists(connection, transaction, "characters", "deeds", "INTEGER NOT NULL DEFAULT 0");
 
                 // Heroes from before perks get one to choose for every level they already earned.
                 if (EnsureColumnExists(connection, transaction, "characters", "pending_perks", "INTEGER NOT NULL DEFAULT 0"))
@@ -126,7 +130,7 @@ namespace ARDO.Data.SQLite
                     (1, 'The First Descent', 'You wake in Oakhaven at the Inn of the Drunken Mare, your eyes heavy after a groggy night of slumber. You dreamt of riches, glory, or perhaps secrets untold, and you know adventure awaits.', 'Minion', 0),
                     (2, 'The Emberward Depths', 'The second layer of the dungeon burns with old judgment and restless echoes.', 'Minion', 0),
                     (3, 'The Hollow Cathedral', 'Deeper still, the bells of a broken cathedral toll, echoing with the prayers of things that should not live.', 'Minion', 0),
-                    (4, 'The God-King Awaits', 'At the root of all things sits the origin of the world: Alhuezo, the Maker of Realms.', 'Boss', 1);");
+                    (4, 'Alhuezo Awaits', 'At the root of all things sits the origin of the world: Alhuezo, the Maker of Realms.', 'Boss', 1);");
 
                 // NPC rows are fixed content: replace them on every launch so edits here reach old saves.
                 Execute(connection, transaction, "DELETE FROM npcs;");
@@ -170,6 +174,8 @@ namespace ARDO.Data.SQLite
                         pending_perks INTEGER NOT NULL DEFAULT 0,
                         guardians_slain INTEGER NOT NULL DEFAULT 0,
                         wheel_turn INTEGER NOT NULL DEFAULT 0,
+                        hard_mode INTEGER NOT NULL DEFAULT 0,
+                        deeds INTEGER NOT NULL DEFAULT 0,
                         FOREIGN KEY (active_story_node) REFERENCES quest_templates(quest_id)
                     );";
 

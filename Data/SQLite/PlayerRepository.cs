@@ -32,7 +32,7 @@ namespace ARDO.Data.SQLite
             _inventoryRepo = new InventoryRepository(config);
         }
 
-        public int CreatePlayer(string name, string classType)
+        public int CreatePlayer(string name, string classType, bool hardMode = false)
         {
             // The class constructors own the starting stats, so they are written in one place.
             Hero hero = HeroFactory.Create(name, classType);
@@ -41,8 +41,8 @@ namespace ARDO.Data.SQLite
             using var connection = _config.CreateConnection();
 
             const string insertQuery = @"
-                INSERT INTO characters (name, class_type, level, experience, current_health, max_health, current_mana, max_mana, gold, active_story_node)
-                VALUES (@name, @classType, @level, 0, @hp, @hp, @mana, @mana, @gold, 1);
+                INSERT INTO characters (name, class_type, level, experience, current_health, max_health, current_mana, max_mana, gold, active_story_node, hard_mode)
+                VALUES (@name, @classType, @level, 0, @hp, @hp, @mana, @mana, @gold, 1, @hard);
                 SELECT last_insert_rowid();";
 
             using var command = new SqliteCommand(insertQuery, connection);
@@ -52,9 +52,20 @@ namespace ARDO.Data.SQLite
             command.Parameters.AddWithValue("@hp", hero.MaxHealth);
             command.Parameters.AddWithValue("@mana", mana);
             command.Parameters.AddWithValue("@gold", hero.Gold);
+            command.Parameters.AddWithValue("@hard", hardMode ? 1 : 0);
 
             object? result = command.ExecuteScalar();
-            return result != null ? Convert.ToInt32(result) : 0;
+            int newId = result != null ? Convert.ToInt32(result) : 0;
+
+            // Every hero sets out with a wooden staff in hand, until something better turns up.
+            if (newId > 0)
+            {
+                Weapon staff = Weapon.StarterStaff();
+                staff.IsEquipped = true;
+                _inventoryRepo.SaveInventoryItem(newId, staff);
+            }
+
+            return newId;
         }
 
         public DataTable GetLoadSlots()
@@ -62,7 +73,7 @@ namespace ARDO.Data.SQLite
             DataTable table = new DataTable();
             using var connection = _config.CreateConnection();
             const string query = @"
-                SELECT c.character_id, c.name, c.class_type, c.level, c.gold, c.story_complete, c.wheel_ending, c.wheel_turn, q.title as current_quest
+                SELECT c.character_id, c.name, c.class_type, c.level, c.gold, c.story_complete, c.wheel_ending, c.wheel_turn, c.hard_mode, q.title as current_quest
                 FROM characters c
                 JOIN quest_templates q ON c.active_story_node = q.quest_id";
 
@@ -102,6 +113,8 @@ namespace ARDO.Data.SQLite
                     hero.PendingPerkPicks = Convert.ToInt32(reader["pending_perks"]);
                     hero.GuardiansSlain = Convert.ToInt32(reader["guardians_slain"]);
                     hero.WheelTurn = Convert.ToInt32(reader["wheel_turn"]);
+                    hero.HardMode = Convert.ToInt32(reader["hard_mode"]) == 1;
+                    hero.Deeds = Convert.ToInt32(reader["deeds"]);
 
                     // Perks are saved by name, comma-separated; a name this build doesn't know is skipped.
                     foreach (string perkName in (reader["perks"]?.ToString() ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries))
@@ -134,7 +147,7 @@ namespace ARDO.Data.SQLite
                 SET level = @level, experience = @xp, current_health = @currentHp, max_health = @maxHp,
                     current_mana = @currentMana, max_mana = @maxMana, gold = @gold, active_story_node = @storyNode,
                     story_complete = @storyComplete, wheel_keys = @wheelKeys, wheel_ending = @wheelEnding,
-                    perks = @perks, pending_perks = @pendingPerks, guardians_slain = @guardians, wheel_turn = @wheelTurn
+                    perks = @perks, pending_perks = @pendingPerks, guardians_slain = @guardians, wheel_turn = @wheelTurn, deeds = @deeds
                 WHERE character_id = @charId;";
 
             using var command = new SqliteCommand(query, connection);
@@ -145,7 +158,8 @@ namespace ARDO.Data.SQLite
             command.Parameters.AddWithValue("@currentMana", character is Mage m ? m.CurrentMana : 0);
             command.Parameters.AddWithValue("@maxMana", character is Mage mage ? mage.MaxMana : 0);
             command.Parameters.AddWithValue("@gold", character.Gold);
-            command.Parameters.AddWithValue("@storyNode", character.ActiveStoryNode);
+            // A road below has no quest of its own; only finished heroes walk one, and they belong at the end of the story.
+            command.Parameters.AddWithValue("@storyNode", FloorTiers.IsDeep(character.ActiveStoryNode) ? FloorTiers.FinalStoryFloor : character.ActiveStoryNode);
             command.Parameters.AddWithValue("@storyComplete", character.StoryComplete ? 1 : 0);
             command.Parameters.AddWithValue("@wheelKeys", character.WheelKeys);
             command.Parameters.AddWithValue("@wheelEnding", (int)character.WheelEnding);
@@ -153,6 +167,7 @@ namespace ARDO.Data.SQLite
             command.Parameters.AddWithValue("@pendingPerks", character.PendingPerkPicks);
             command.Parameters.AddWithValue("@guardians", character.GuardiansSlain);
             command.Parameters.AddWithValue("@wheelTurn", character.WheelTurn);
+            command.Parameters.AddWithValue("@deeds", character.Deeds);
             command.Parameters.AddWithValue("@charId", character.CharacterId);
 
             command.ExecuteNonQuery();
@@ -175,6 +190,11 @@ namespace ARDO.Data.SQLite
         public void RemoveInventoryItem(int characterId, int itemId)
         {
             _inventoryRepo.RemoveInventoryItem(characterId, itemId);
+        }
+
+        public void SaveItemUses(int characterId, GameItem item)
+        {
+            _inventoryRepo.SaveItemUses(characterId, item);
         }
 
         public void SaveEquipment(Hero character)

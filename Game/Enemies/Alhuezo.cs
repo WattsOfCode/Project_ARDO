@@ -4,7 +4,7 @@
  * Project ARDO
  *
  * Class description:
- * `Alhuezo.cs` is the concrete final boss, the God-King. The first meeting is a
+ * `Alhuezo.cs` is the concrete final boss. The first meeting is a
     scripted loss that the combat engine plays as the epilogue. When a finished
     hero returns with the three keys, he fights for real, sized to the hero who
     came back for him.
@@ -17,13 +17,13 @@ namespace ARDO.Game.Enemies
     public sealed class Alhuezo : Boss
     {
         // The first throne fight: he can't be beaten, and the engine plays the ending.
-        public Alhuezo() : base("Alhuezo, the God-King", 999, 80)
+        public Alhuezo() : base("Alhuezo", 999, 80)
         {
             IsScripted = true;
         }
 
         // The rematch with the keys: strong, but beatable by the hero standing in front of him.
-        private Alhuezo(int health, int damage) : base("Alhuezo, the God-King", health, damage)
+        private Alhuezo(int health, int damage) : base("Alhuezo", health, damage)
         {
             XpReward = 600;
             GoldReward = 500;

@@ -16,13 +16,14 @@ namespace ARDO.Data
 {
     public interface IPlayerRepository
     {
-        int CreatePlayer(string name, string classType);
+        int CreatePlayer(string name, string classType, bool hardMode = false);
         DataTable GetLoadSlots();
         Hero? LoadFullProfile(int characterId);
         void SaveGameState(Hero character);
         void DeleteProfile(int characterId);
         void SaveInventoryItem(int characterId, GameItem item);
         void RemoveInventoryItem(int characterId, int itemId);
+        void SaveItemUses(int characterId, GameItem item);
         void SaveEquipment(Hero character);
     }
 }

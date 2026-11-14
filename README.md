@@ -65,6 +65,20 @@ This repository currently reflects the Phase 3 release of the project, including
   goes to mist behind three ravens, and no blow reaches her while they live and feed her. The approach warns of it
 - Defeat screen: a fallen hero chooses between two cards, Rise Again (50 gold) or Start a New Hero, which erases
   the save after a second confirmation and opens the new-hero screen. The run summary shows underneath
+- Deeper roads: each turn of the wheel opens two travel floors on the road to one boss, listed before the floor they
+  lead to and picked by label (1a, 1b). They have no guardian or key, just longer runs of fights, forks and events at
+  the deepest tier, with veteran enemies. Turn 1 opens The Robbers' Road and The Banner Halls on the way to Grisk,
+  with the Goblin Cutpurse (escapes with your gold if not killed in time), the Goblin Brute and the Goblin Shaman
+  (heals the most hurt goblin). Turns 2 to 4 are planned for the Matron, the Witch and the throne
+- Talking in town: option 6 opens the inn's common room. Maren is always there; Eldrin arrives by quest 2 (or once
+  the hero has helped her as the wounded scout), Sera by quest 3. Each has lines that change with progress
+- Journals: empty rooms on floors 1 to 3 and the deeper roads often hold a journal page that hints at Alhuezo, the
+  keys and the door to his throne
+- Starting staff: every new hero sets out with a Wooden Staff (+3 ATK) that breaks after 10 won fights
+- Full pack: a better find replaces the least valuable item carried; a worse one is left behind
+- Hard mode: chosen on the creation screen (type hard). A hard-mode hero who falls is erased at once
+- Quick guide: type help or ? anywhere for the controls
+- Town option 7 turns the wheel (it was 6)
 
 ## Screen Recording
 

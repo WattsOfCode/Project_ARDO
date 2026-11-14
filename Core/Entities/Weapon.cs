@@ -37,8 +37,21 @@ namespace ARDO.Core.Entities
             Effect = effect;
         }
 
-        public override string Summary => Effect == ItemEffect.None
-            ? $"+{DamageBonus} ATK"
-            : $"+{DamageBonus} ATK, {EffectText}";
+        public override string Summary
+        {
+            get
+            {
+                string text = Effect == ItemEffect.None ? $"+{DamageBonus} ATK" : $"+{DamageBonus} ATK, {EffectText}";
+                return WearsOut ? $"{text}, breaks after {UsesLeft} more {(UsesLeft == 1 ? "fight" : "fights")}" : text;
+            }
+        }
+
+        // Every new hero sets out with one. It does the job until something better turns up, or it breaks.
+        public const int StarterStaffUses = 10;
+
+        public static Weapon StarterStaff() => new("Wooden Staff", "A walking staff from the inn's woodpile. It won't last.", RarityType.Common, 1, 3)
+        {
+            UsesLeft = StarterStaffUses
+        };
     }
 }

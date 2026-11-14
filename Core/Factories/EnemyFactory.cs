@@ -26,6 +26,9 @@ namespace ARDO.Core.Factories
                 EnemyType.WraithHerald => new WraithHerald(),
                 EnemyType.HollowCaptain => new HollowCaptain(),
                 EnemyType.Alhuezo => new Alhuezo(),
+                EnemyType.GoblinCutpurse => new GoblinCutpurse(),
+                EnemyType.GoblinBrute => new GoblinBrute(),
+                EnemyType.GoblinShaman => new GoblinShaman(),
                 _ => throw new ArgumentOutOfRangeException(nameof(enemyType))
             };
         }

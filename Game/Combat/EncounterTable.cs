@@ -53,7 +53,8 @@ namespace ARDO.Game.Combat
 
         public static IReadOnlyList<Enemy> RollGroup(int questId)
         {
-            if (!Groups.TryGetValue(questId, out EnemyType[][]? patterns))
+            EnemyType[][]? patterns = DeepFloors.Get(questId)?.Groups;
+            if (patterns == null && !Groups.TryGetValue(questId, out patterns))
             {
                 patterns = Groups[1];
             }
@@ -64,6 +65,9 @@ namespace ARDO.Game.Combat
 
         public static int FightsPerRun(int questId)
         {
+            if (DeepFloors.Get(questId) is DeepFloor deep)
+                return deep.Fights;
+
             return questId switch
             {
                 1 => 2,

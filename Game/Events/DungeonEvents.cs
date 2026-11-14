@@ -91,13 +91,15 @@ namespace ARDO.Game.Events
                             return outcome.Say("You have no healing potion to give. You bind the wound as best you can, and she thanks you anyway.", MessageTone.Dim);
                         }
 
-                        int floor = hero.ActiveStoryNode;
+                        int floor = hero.FloorTier;
                         int gold = 25 + floor * 15;
                         int xp = 20 * floor;
 
                         outcome.ItemUsedUp = potion;
                         hero.Gold += gold;
                         outcome.Say($"She drinks the {potion.Name} and presses a heavy purse into your hand. +{gold} gold, +{xp} XP.", MessageTone.Gold);
+                        outcome.Say("\"Eldrin,\" she says, when you ask her name. \"I scout for Oakhaven. I won't forget this.\"", MessageTone.Dim);
+                        hero.Deeds |= Hero.DeedHelpedEldrin;
                         if (hero.GainExperience(xp))
                         {
                             outcome.Say($"You reach level {hero.Level}!", MessageTone.Gold);
@@ -108,7 +110,7 @@ namespace ARDO.Game.Events
                     new EventChoice("Take her pack", hero =>
                     {
                         var outcome = new EventOutcome();
-                        int gold = 15 + hero.ActiveStoryNode * 10;
+                        int gold = 15 + hero.FloorTier * 10;
                         hero.Gold += gold;
                         outcome.Say($"You tear the pack from her shoulders. +{gold} gold.", MessageTone.Gold);
 
@@ -176,7 +178,7 @@ namespace ARDO.Game.Events
                             return outcome.Say($"A blade springs from the lid! You lose {lost} HP, and the chest is empty.", MessageTone.Damage);
                         }
 
-                        outcome.Reward = LootGenerator.RollGear(hero.ActiveStoryNode, RarityType.Uncommon);
+                        outcome.Reward = LootGenerator.RollGear(hero.FloorTier, RarityType.Uncommon);
                         return outcome.Say("The lock gives way with a crack.");
                     }),
                     new EventChoice("Leave it", _ =>

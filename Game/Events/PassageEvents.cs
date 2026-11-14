@@ -29,6 +29,9 @@ namespace ARDO.Game.Events
 
         private const int ChestTrapChancePercent = 25;
 
+        // An empty room often has a journal left in it.
+        private const int JournalChancePercent = 60;
+
         private enum Way { Fight, Door, Event }
 
         private static readonly string[] FightHints =
@@ -143,6 +146,9 @@ namespace ARDO.Game.Events
             }
 
             int healed = hero.Heal(hero.MaxHealth / 8);
+            if (LoreEvents.HasPage(hero.ActiveStoryNode) && Random.Shared.Next(100) < JournalChancePercent)
+                outcome.FollowUp = LoreEvents.Journal(hero.ActiveStoryNode);
+
             return outcome.Say(healed > 0
                 ? $"An empty room, dry and quiet. You catch your breath and recover {healed} HP."
                 : "An empty room, dry and quiet. You catch your breath.", MessageTone.Heal);
@@ -186,7 +192,7 @@ namespace ARDO.Game.Events
                 outcome.Say($"A needle snaps out of the lock. You lose {lost} HP, but the lid comes up.", MessageTone.Damage);
             }
 
-            int floor = Math.Max(1, hero.ActiveStoryNode);
+            int floor = hero.FloorTier;
             int gold = hero.WithGoldBonus(Random.Shared.Next(15, 31) + floor * 10);
             hero.Gold += gold;
             outcome.Say($"Coins spill out under your hands: +{gold} gold.", MessageTone.Gold);

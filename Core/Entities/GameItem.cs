@@ -25,6 +25,11 @@ namespace ARDO.Core.Entities
 
         public int Value { get; set; }
 
+        // Won fights left before it breaks; 0 means it never wears out.
+        public int UsesLeft { get; set; }
+
+        public bool WearsOut => UsesLeft > 0;
+
         public int StatModifier { get; set; }
 
         public EquipmentSlot EquippedSlot { get; set; }

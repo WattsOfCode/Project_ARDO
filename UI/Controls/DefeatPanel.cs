@@ -40,7 +40,9 @@ namespace ARDO.UI.Controls
         // Raised once the player has decided: true to rise again, false to erase this hero and start a new one.
         public event Action<bool>? Decided;
 
-        public string CommandHint => _confirmingErase
+        public string CommandHint => _hero.HardMode
+            ? "Hard mode: this hero is gone. Type 2 (or click the card) to start a new hero."
+            : _confirmingErase
             ? $"Type 2 again to erase {_hero.Name} for good, or 1 to rise again."
             : $"Type 1 to rise again in Oakhaven ({_riseCost} gold), or 2 to start a new hero (or click a card).";
 
@@ -81,7 +83,7 @@ namespace ARDO.UI.Controls
             var title = new Label
             {
                 Dock = DockStyle.Fill,
-                Text = "YOU HAVE FALLEN",
+                Text = _hero.HardMode ? "FALLEN FOR GOOD" : "YOU HAVE FALLEN",
                 ForeColor = Color.Gold,
                 BackColor = Color.Black,
                 Font = new Font("Consolas", 24, FontStyle.Bold),
@@ -91,7 +93,9 @@ namespace ARDO.UI.Controls
             var subtitle = new Label
             {
                 Dock = DockStyle.Fill,
-                Text = $"{_hero.Name} the {_hero.ClassName}, level {_hero.Level}, lies still on the dungeon floor.",
+                Text = _hero.HardMode
+                    ? $"{_hero.Name} the {_hero.ClassName}, level {_hero.Level}, will not rise again. Hard mode has no second chances."
+                    : $"{_hero.Name} the {_hero.ClassName}, level {_hero.Level}, lies still on the dungeon floor.",
                 ForeColor = Color.LightGray,
                 BackColor = Color.Black,
                 Font = UiFonts.Mono(11f),
@@ -126,14 +130,15 @@ namespace ARDO.UI.Controls
             root.Controls.Add(subtitle, 0, 2);
 
             bool canAfford = _hero.Gold >= _riseCost;
-            _cards[RiseIndex] = BuildCard(RiseIndex, "RISE AGAIN",
-                "Wake in Oakhaven with your level,\ngear and perks.",
-                canAfford
+            _cards[RiseIndex] = BuildCard(RiseIndex, _hero.HardMode ? "NO RISING" : "RISE AGAIN",
+                _hero.HardMode ? "In hard mode the dead\nstay dead." : "Wake in Oakhaven with your level,\ngear and perks.",
+                _hero.HardMode ? "Closed to this hero."
+                : canAfford
                     ? $"Costs {_riseCost} gold. You have {_hero.Gold}."
                     : $"Costs {_riseCost} gold. You have {_hero.Gold}, so it takes it all.");
             _cards[NewIndex] = BuildCard(NewIndex, "START A NEW HERO",
-                $"Let {_hero.Name} go and begin again\nwith someone new.",
-                "This hero's save is erased for good.");
+                _hero.HardMode ? $"{_hero.Name}'s story is over.\nBegin again with someone new." : $"Let {_hero.Name} go and begin again\nwith someone new.",
+                _hero.HardMode ? "This hero's save has been erased." : "This hero's save is erased for good.");
 
             root.Controls.Add(_cards[RiseIndex], 0, 3);
             root.Controls.Add(_cards[NewIndex], 1, 3);
@@ -250,6 +255,20 @@ namespace ARDO.UI.Controls
 
         private void Choose(int index)
         {
+            // In hard mode there is nothing to confirm: the hero is already gone.
+            if (_hero.HardMode)
+            {
+                if (index == RiseIndex)
+                {
+                    Select(RiseIndex, "In hard mode the dead stay dead. Type 2 to start a new hero.");
+                    return;
+                }
+
+                Select(NewIndex, "A new hero sets out for Oakhaven...");
+                Decided?.Invoke(false);
+                return;
+            }
+
             if (index == RiseIndex)
             {
                 Select(RiseIndex, "Oakhaven calls you back...");

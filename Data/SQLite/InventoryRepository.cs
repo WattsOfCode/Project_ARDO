@@ -34,7 +34,7 @@ namespace ARDO.Data.SQLite
 
             const string query = @"
                 SELECT item_id, item_name, item_description, type_category, item_value,
-                       stat_modifier, rarity_tier, equipment_slot, is_equipped, item_effect
+                       stat_modifier, rarity_tier, equipment_slot, is_equipped, item_effect, uses_left
                 FROM inventory_items
                 WHERE character_id = @charId
                 ORDER BY item_id;";
@@ -67,9 +67,9 @@ namespace ARDO.Data.SQLite
             const string query = @"
                 INSERT INTO inventory_items
                     (character_id, item_name, item_description, type_category, item_value,
-                     stat_modifier, rarity_tier, equipment_slot, is_equipped, item_effect)
+                     stat_modifier, rarity_tier, equipment_slot, is_equipped, item_effect, uses_left)
                 VALUES
-                    (@charId, @name, @description, @type, @value, @modifier, @rarity, @slot, @equipped, @effect);
+                    (@charId, @name, @description, @type, @value, @modifier, @rarity, @slot, @equipped, @effect, @uses);
                 SELECT last_insert_rowid();";
 
             using var command = new SqliteCommand(query, connection);
@@ -83,6 +83,7 @@ namespace ARDO.Data.SQLite
             command.Parameters.AddWithValue("@slot", item.EquippedSlot.ToString());
             command.Parameters.AddWithValue("@equipped", item.IsEquipped ? 1 : 0);
             command.Parameters.AddWithValue("@effect", item.Effect.ToString());
+            command.Parameters.AddWithValue("@uses", item.UsesLeft);
 
             object? insertedId = command.ExecuteScalar();
             item.ItemId = insertedId != null ? Convert.ToInt32(insertedId) : 0;
@@ -104,6 +105,16 @@ namespace ARDO.Data.SQLite
             using var command = new SqliteCommand(query, connection);
             command.Parameters.AddWithValue("@charId", characterId);
             command.Parameters.AddWithValue("@itemId", itemId);
+            command.ExecuteNonQuery();
+        }
+
+        public void SaveItemUses(int characterId, GameItem item)
+        {
+            using var connection = _config.CreateConnection();
+            using var command = new SqliteCommand("UPDATE inventory_items SET uses_left = @uses WHERE character_id = @charId AND item_id = @itemId;", connection);
+            command.Parameters.AddWithValue("@uses", item.UsesLeft);
+            command.Parameters.AddWithValue("@charId", characterId);
+            command.Parameters.AddWithValue("@itemId", item.ItemId);
             command.ExecuteNonQuery();
         }
 
@@ -159,6 +170,7 @@ namespace ARDO.Data.SQLite
             };
 
             item.ItemId = itemId;
+            item.UsesLeft = Convert.ToInt32(reader["uses_left"]);
             return item;
         }
     }

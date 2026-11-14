@@ -12,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using ARDO.Core.Abstracts;
 using ARDO.Core.Enums;
+using ARDO.Game.Combat;
 using ARDO.Game.Progression;
 
 namespace ARDO.Game.Events
@@ -36,6 +37,8 @@ namespace ARDO.Game.Events
 
             WheelTwist? added = WheelTurns.AddedAt(next);
             lines.Add(added != null ? $"  {added.Name}: {added.Description}" : $"  {WheelTurns.GrindLine(next)}");
+            foreach (DeepFloor road in DeepFloors.OpenedAt(next))
+                lines.Add($"  A new road opens: {road.Label} {road.Title}, on the way to {road.LeadsToName}.");
 
             bool first = true;
             foreach (WheelTwist kept in WheelTurns.InForce(hero.WheelTurn))

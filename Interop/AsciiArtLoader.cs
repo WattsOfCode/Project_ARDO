@@ -51,7 +51,15 @@ namespace ARDO.Interop
                 }
             }
 
-            // 3. Final verification
+            // 3. An enemy still waiting on its art borrows the placeholder.
+            if (!File.Exists(path) && category == "Enemies")
+            {
+                string placeholder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Content", "ASCII", category, "placeholder.txt");
+                if (File.Exists(placeholder))
+                    path = placeholder;
+            }
+
+            // 4. Final verification
             if (!File.Exists(path))
             {
                 Debug.WriteLine($"[ARDO][ASCII] Missing art file: {path}");

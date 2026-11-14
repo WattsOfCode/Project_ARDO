@@ -24,6 +24,10 @@ Every picture in this folder follows the same rules, so the game looks like one 
 
 File names are the enemy's or class's `ArtKey`: `Heroes/<class>.txt`, `Enemies/<ArtKey>.txt`.
 
+**Placeholder.** An enemy whose `Enemies/<ArtKey>.txt` doesn't exist yet shows `Enemies/placeholder.txt`, a plain
+question mark. To give it real art, add the file under its ArtKey; nothing else changes. Waiting on art now:
+`goblinbrute` (Goblin Brute) and `goblinshaman` (Goblin Shaman). The Goblin Cutpurse reuses `goblin`.
+
 ## The tool
 
 `tools/asciiart.py` needs only Python.

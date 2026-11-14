@@ -53,7 +53,7 @@ namespace ARDO.UI.Display
             _form.ClearNarrative();
 
             var panel = new CharacterCreationPanel(_form.SetCommandContext);
-            panel.HeroChosen += CreateHero;
+            panel.HeroChosen += (name, classType) => CreateHero(name, classType, panel.HardMode);
             panel.CloseRequested += (_, __) => _form.Close();
             _form.ShowOverlay(panel);
         }
@@ -101,9 +101,9 @@ namespace ARDO.UI.Display
             }
         }
 
-        private void CreateHero(string name, string classType)
+        private void CreateHero(string name, string classType, bool hardMode)
         {
-            int newId = _playerRepo.CreatePlayer(name, classType);
+            int newId = _playerRepo.CreatePlayer(name, classType, hardMode);
             Hero? loadedHero = _playerRepo.LoadFullProfile(newId);
 
             if (loadedHero != null)
@@ -134,11 +134,12 @@ namespace ARDO.UI.Display
                 {
                     1 => "  (turned the wheel)",
                     2 => "  (stepped off the wheel)",
-                    _ => IsFinished(row) ? "  (fell to the God-King)" : string.Empty
+                    _ => IsFinished(row) ? "  (fell to Alhuezo)" : string.Empty
                 };
                 int turn = Convert.ToInt32(row["wheel_turn"]);
                 string turnText = turn > 0 ? $"  Turn {turn}" : string.Empty;
-                _form.AppendNarrative($"{i + 1}. {row["name"],-18} Level {row["level"],-3} {row["class_type"]}{turnText}{fate}");
+                string hardText = Convert.ToInt32(row["hard_mode"]) == 1 ? "  [Hard]" : string.Empty;
+                _form.AppendNarrative($"{i + 1}. {row["name"],-18} Level {row["level"],-3} {row["class_type"]}{hardText}{turnText}{fate}");
             }
 
             _form.SetCommandContext($"Load: pick a hero 1 to {_cachedSlots.Rows.Count}, or 0 to go back.");

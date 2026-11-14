@@ -24,8 +24,8 @@ namespace ARDO.UI.Controls
     public class CharacterCreationPanel : UserControl, IOverlayPanel
     {
         private const int MaxNameLength = 16;
-        private const string NameHint = "Type your hero's name and press Enter. Esc returns to the start screen.";
-        private const string ClassHint = "Pick a class: 1 Warrior, 2 Mage, 3 Archer or 4 Rogue (or click a card). Type back to rename.";
+        private const string NameHint = "Type a name and press Enter. Type hard or normal to set the mode; Esc goes back.";
+        private const string ClassHint = "Pick a class 1 to 4 (or click a card). back renames; hard or normal sets the mode.";
 
         private static readonly (string Class, string Art, string Pitch)[] Classes =
         {
@@ -38,6 +38,7 @@ namespace ARDO.UI.Controls
         private readonly Action<string> _setHint;
         private readonly Panel[] _cards = new Panel[Classes.Length];
         private Label _nameValue = null!;
+        private Label _modeValue = null!;
         private Label _feedbackLabel = null!;
         private string? _name;
         private int _chosenClass = -1;
@@ -50,6 +51,9 @@ namespace ARDO.UI.Controls
         public event Action<string, string>? HeroChosen;
 
         public string CommandHint => _name == null ? NameHint : ClassHint;
+
+        // Hard mode: no rising again after a fall.
+        public bool HardMode { get; private set; }
 
         public CharacterCreationPanel(Action<string> setHint)
         {
@@ -121,6 +125,32 @@ namespace ARDO.UI.Controls
 
             nameRow.Controls.Add(nameLabel);
             nameRow.Controls.Add(_nameValue);
+
+            var modeLabel = new Label
+            {
+                AutoSize = true,
+                Text = "Mode",
+                ForeColor = Color.Gold,
+                BackColor = Color.Black,
+                Font = UiFonts.Mono(13f, FontStyle.Bold),
+                Margin = new Padding(40, 8, 14, 0),
+                Cursor = Cursors.Hand
+            };
+
+            _modeValue = new Label
+            {
+                AutoSize = true,
+                BackColor = Color.Black,
+                Font = UiFonts.Mono(13f),
+                Margin = new Padding(0, 8, 0, 0),
+                Cursor = Cursors.Hand
+            };
+
+            // Clicking the mode switches it.
+            modeLabel.Click += (_, __) => SetMode(!HardMode);
+            _modeValue.Click += (_, __) => SetMode(!HardMode);
+            nameRow.Controls.Add(modeLabel);
+            nameRow.Controls.Add(_modeValue);
 
             _feedbackLabel = new Label
             {
@@ -260,6 +290,12 @@ namespace ARDO.UI.Controls
                 return;
             }
 
+            if (lower is "hard" or "normal")
+            {
+                SetMode(lower == "hard");
+                return;
+            }
+
             // A number always means a class, even before the name is in.
             int index = lower switch
             {
@@ -351,8 +387,19 @@ namespace ARDO.UI.Controls
             HeroChosen?.Invoke(_name, Classes[_chosenClass].Class);
         }
 
+        private void SetMode(bool hard)
+        {
+            HardMode = hard;
+            _feedbackLabel.Text = hard
+                ? "Hard mode: if this hero falls, they are gone for good."
+                : "Normal mode: a fallen hero can rise again in Oakhaven.";
+            RefreshView();
+        }
+
         private void RefreshView()
         {
+            _modeValue.Text = HardMode ? "Hard (no rising again)" : "Normal";
+            _modeValue.ForeColor = HardMode ? Color.Gold : Color.LightSkyBlue;
             _nameValue.Text = _name ?? "(type it in the command box below)";
             _nameValue.ForeColor = _name == null ? Color.LightGray : Color.LightSkyBlue;
             _setHint(CommandHint);

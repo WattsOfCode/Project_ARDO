@@ -21,6 +21,9 @@ namespace ARDO.Core.Enums
         FireImp,
         WraithHerald,
         HollowCaptain,
-        Alhuezo
+        Alhuezo,
+        GoblinCutpurse,
+        GoblinBrute,
+        GoblinShaman
     }
 }

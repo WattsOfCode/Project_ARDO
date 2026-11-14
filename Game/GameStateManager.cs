@@ -60,6 +60,10 @@ namespace ARDO.Game
 
         // The "turn the wheel again" prompt is open in town.
         private bool _wheelChoiceInTown;
+
+        // Talking in the common room, and how often each person has been talked to this session.
+        private bool _talkInTown;
+        private readonly Dictionary<string, int> _timesTalked = new();
         private bool _keyOfferedThisRun;
         private bool _keyRumorShown;
         private const int KeyEventChancePercent = 60;
@@ -104,7 +108,9 @@ namespace ARDO.Game
                     "Our entire existence is a countdown in reverse.");
                 Say("");
                 Say("The Maw below Oakhaven has opened again. You must descend into the primordial dark, " +
-                    "butcher the guardians of the twisted timeline, and challenge Alhuezo, the God-King who turned our growth into a slow, living decay.");
+                    "butcher the guardians of the twisted timeline, and challenge Alhuezo, who turned our growth into a slow, living decay.");
+                Say("");
+                Say("(Type help at any time for a quick guide to the controls.)", MessageTone.Dim);
             }
             else if (_hero.WheelEnding == WheelEnding.TurnedTheWheel)
             {
@@ -259,10 +265,12 @@ namespace ARDO.Game
         public static bool IsGearCommand(string command) =>
             command is "gear" or "g" or "equipment" or "equip";
 
+        public static bool IsHelpCommand(string command) => command is "help" or "?";
+
         public static bool IsPanelCommand(string command)
         {
             string normalized = command.Trim().ToLowerInvariant();
-            return IsInventoryCommand(normalized) || IsGearCommand(normalized);
+            return IsInventoryCommand(normalized) || IsGearCommand(normalized) || IsHelpCommand(normalized);
         }
 
         public void ProcessCommand(string command)
@@ -272,6 +280,13 @@ namespace ARDO.Game
             if (CurrentState == GameState.DefeatPrompt)
             {
                 ProcessDefeatPrompt(normalized);
+                return;
+            }
+
+            if (IsHelpCommand(normalized))
+            {
+                if (_openPanel is not HelpPanel)
+                    ShowPanel(new HelpPanel());
                 return;
             }
 
@@ -362,6 +377,12 @@ namespace ARDO.Game
                     return;
 
                 case "6":
+                case "talk":
+                    _talkInTown = true;
+                    BeginEvent(TownTalk.CommonRoom(_hero, _timesTalked));
+                    return;
+
+                case "7":
                 case "turn":
                 case "wheel":
                     if (_hero.WheelEnding == WheelEnding.None)
@@ -508,7 +529,7 @@ namespace ARDO.Game
                 }
             }
 
-            if (!_onSidePassage && _hero.ActiveStoryNode < EncounterTable.FinalQuestId)
+            if (!_onSidePassage && (_hero.ActiveStoryNode < EncounterTable.FinalQuestId || FloorTiers.IsDeep(_hero.ActiveStoryNode)))
             {
                 BeginEvent(DungeonEvents.SidePassage());
                 return;
@@ -519,7 +540,7 @@ namespace ARDO.Game
 
         private void HandlePostCombatVictory()
         {
-            int floor = _hero.ActiveStoryNode;
+            int floor = _hero.FloorTier;
 
             GameItem? drop = LootGenerator.RollEncounterDrop(floor, _hero);
             if (drop != null)
@@ -537,6 +558,8 @@ namespace ARDO.Game
                 _fightingGuardian = false;
                 RewardGuardianKill(floor);
             }
+
+            WearGear();
 
             if (_onSidePassage)
             {
@@ -571,14 +594,49 @@ namespace ARDO.Game
             GiveItem(LootGenerator.RollGear(floor + 1, RarityType.Epic), "A trophy of the first kill:");
         }
 
+        // Gear that wears out (the starting staff) loses a use with every won fight, and breaks at the last.
+        private void WearGear()
+        {
+            foreach (GameItem worn in _hero.Equipment.Worn.Where(item => item.WearsOut).ToList())
+            {
+                worn.UsesLeft--;
+                if (worn.UsesLeft > 0)
+                {
+                    _playerRepo.SaveItemUses(_hero.CharacterId, worn);
+                    if (worn.UsesLeft <= 2)
+                        Say($"Your {worn.Name} creaks. It has {worn.UsesLeft} more {(worn.UsesLeft == 1 ? "fight" : "fights")} in it.", MessageTone.Warning);
+                    continue;
+                }
+
+                _hero.Equipment.Unequip(worn);
+                _hero.HeroInventory.RemoveItem(worn);
+                _playerRepo.RemoveInventoryItem(_hero.CharacterId, worn.ItemId);
+                _playerRepo.SaveEquipment(_hero);
+                Say($"Your {worn.Name} splinters and breaks. Time to find a real weapon.", MessageTone.Warning);
+            }
+        }
+
         // Adds an item to the pack (if there is room), saves it, and wears it if it's an upgrade.
         private void GiveItem(GameItem item, string intro)
         {
             Say("");
             if (!_hero.HeroInventory.AddItem(item))
             {
-                Say($"You find {item}, but your pack is full. Sell something in town to make room.", MessageTone.Dim);
-                return;
+                GameItem? cheapest = _hero.HeroInventory.GetItems()
+                    .Where(carried => !carried.IsEquipped && !_hero.Equipment.Worn.Contains(carried))
+                    .OrderBy(carried => carried.Value)
+                    .FirstOrDefault();
+
+                if (cheapest == null || cheapest.Value >= item.Value)
+                {
+                    Say($"You find {item}, but your pack is full and everything in it is worth more. You leave it behind.", MessageTone.Dim);
+                    return;
+                }
+
+                _hero.HeroInventory.RemoveItem(cheapest);
+                _playerRepo.RemoveInventoryItem(_hero.CharacterId, cheapest.ItemId);
+                _hero.HeroInventory.AddItem(item);
+                Say($"Your pack is full, so you leave the {cheapest.Name} behind to make room.", MessageTone.Dim);
             }
 
             _playerRepo.SaveInventoryItem(_hero.CharacterId, item);
@@ -660,6 +718,21 @@ namespace ARDO.Game
 
             _playerRepo.SaveGameState(_hero);
             _ui.UpdateVisualMetricsDisplay();
+
+            if (_talkInTown)
+            {
+                // Another word, or back to the town.
+                if (choice < dungeonEvent.Choices.Count)
+                {
+                    BeginEvent(TownTalk.CommonRoom(_hero, _timesTalked));
+                    return;
+                }
+
+                _talkInTown = false;
+                CurrentState = GameState.Town;
+                ShowTownMenu(arriving: false);
+                return;
+            }
 
             if (_wheelChoiceInTown)
             {
@@ -743,7 +816,12 @@ namespace ARDO.Game
         private void CompleteDungeonRun()
         {
             QuestRepository.QuestSummary? quest = _questRepo.GetQuestSummary(_hero.ActiveStoryNode);
-            if (quest != null)
+            if (DeepFloors.Get(_hero.ActiveStoryNode) is DeepFloor deep)
+            {
+                Say("");
+                Say($"The road falls quiet behind you. You climb the long way back from {deep.Title} to Oakhaven.");
+            }
+            else if (quest != null)
             {
                 Say("");
                 Say("The floor falls quiet behind you, and you climb back to Oakhaven.");
@@ -777,15 +855,14 @@ namespace ARDO.Game
         // The town description only on arrival; after that, just the choices.
         private void ShowTownMenu(bool arriving = true)
         {
-            string turnOption = CanTurnAgain ? ", 6 turn the wheel again" : string.Empty;
-            _ui.SetCommandContext($"Town: 1 shop, 2 rest at inn ({RestCost}g), 3 enter dungeon, 4 save, 5 main menu{turnOption}, i / g pack and gear, perks.");
+            _ui.SetCommandContext($"Town: pick 1 to {TownChoiceCount} from the menu, or type i / g for pack and gear, perks, or help.");
             Say("");
             if (arriving)
             {
                 Say("Oakhaven settles around you. The merchant waits nearby, the inn is warm, and the dungeon still looms below.");
             }
 
-            Say($"1 Shop   2 Rest ({RestCost}g)   3 Dungeon   4 Save   5 Main menu{(CanTurnAgain ? "   6 Turn wheel" : string.Empty)}", MessageTone.Dim);
+            Say($"1 Shop  2 Rest ({RestCost}g)  3 Dungeon  4 Save  5 Menu  6 Talk{(CanTurnAgain ? "  7 Turn wheel" : string.Empty)}", MessageTone.Dim);
         }
 
         private void OpenTownShop()
@@ -858,9 +935,12 @@ namespace ARDO.Game
             _ui.RestoreNarrativePanel();
             _ui.UpdateVisualMetricsDisplay();
             Say("");
-            Say(panel is ShopPanel
-                ? "You return from the town shop and step back into Oakhaven."
-                : "You close your pack and look up.");
+            Say(panel switch
+            {
+                ShopPanel => "You return from the town shop and step back into Oakhaven.",
+                HelpPanel => "You put the guide away.",
+                _ => "You close your pack and look up."
+            });
 
             if (CurrentState == GameState.Town)
                 ShowTownMenu(arriving: false);
@@ -896,9 +976,15 @@ namespace ARDO.Game
             Say("Which floor will you walk?");
             for (int floor = 1; floor < EncounterTable.FinalQuestId; floor++)
             {
+                foreach (DeepFloor road in DeepFloors.Before(_hero, floor))
+                    Say($"{road.Label}. {road.Title} (on the road to {road.LeadsToName})", MessageTone.Warning);
+
                 QuestRepository.QuestSummary? quest = _questRepo.GetQuestSummary(floor);
                 Say($"{floor}. {quest?.Title ?? $"Floor {floor}"}");
             }
+
+            foreach (DeepFloor road in DeepFloors.Before(_hero, EncounterTable.FinalQuestId))
+                Say($"{road.Label}. {road.Title} (on the road to {road.LeadsToName})", MessageTone.Warning);
 
             if (ThroneStillSealed)
             {
@@ -914,7 +1000,7 @@ namespace ARDO.Game
         // After an ending the hero may turn the wheel again.
         private bool CanTurnAgain => _hero.WheelEnding != WheelEnding.None;
 
-        private int TownChoiceCount => CanTurnAgain ? 6 : 5;
+        private int TownChoiceCount => CanTurnAgain ? 7 : 6;
 
         private int RestCost => WheelTurns.RestCost(_hero.WheelTurn);
 
@@ -925,9 +1011,16 @@ namespace ARDO.Game
             _ => $"{count} times"
         };
 
-        private string FloorPrompt => ThroneStillSealed
-            ? "Pick a floor 1 to 3, 4 for the sealed throne, or 0 to stay in town."
-            : "Pick a floor 1 to 3, or 0 to stay in town.";
+        private string FloorPrompt
+        {
+            get
+            {
+                string roads = DeepFloors.OpenFor(_hero).Any() ? $", {string.Join(", ", DeepFloors.OpenFor(_hero).Select(road => road.Label))}" : string.Empty;
+                return ThroneStillSealed
+                    ? $"Pick a floor 1 to 3{roads}, 4 for the sealed throne, or 0 to stay in town."
+                    : $"Pick a floor 1 to 3{roads}, or 0 to stay in town.";
+            }
+        }
 
         private void ShowFinishedHeroTown()
         {
@@ -935,12 +1028,12 @@ namespace ARDO.Game
             {
                 case WheelEnding.TurnedTheWheel:
                     Say("You turned the wheel. Floors 1 to 3 are still yours to walk.", MessageTone.Gold);
-                    Say($"Or type 6 to turn it again, to Turn {_hero.WheelTurn + 1}: harder floors, richer pay.", MessageTone.Dim);
+                    Say($"Or type 7 to turn it again, to Turn {_hero.WheelTurn + 1}: harder floors, richer pay.", MessageTone.Dim);
                     return;
 
                 case WheelEnding.SteppedOff:
                     Say("You stepped off the wheel. Floors 1 to 3 are still yours to walk.", MessageTone.Gold);
-                    Say($"Or type 6 to climb back on, to Turn {_hero.WheelTurn + 1}: harder floors, richer pay.", MessageTone.Dim);
+                    Say($"Or type 7 to climb back on, to Turn {_hero.WheelTurn + 1}: harder floors, richer pay.", MessageTone.Dim);
                     return;
             }
 
@@ -960,6 +1053,8 @@ namespace ARDO.Game
                 Say("Your story is told. The throne is sealed, but floors 1 to 3 are still yours to walk.", MessageTone.Gold);
             }
             Say($"Keys of the wheel: {_hero.WheelKeyCount} of 3.", MessageTone.Dim);
+            if (DeepFloors.OpenFor(_hero).Any())
+                Say($"Deeper roads: {string.Join(", ", DeepFloors.OpenFor(_hero).Select(road => $"{road.Label} {road.Title}"))}.", MessageTone.Dim);
 
             // Maren points the way once a session.
             if (_keyRumorShown)
@@ -1001,6 +1096,14 @@ namespace ARDO.Game
                 return;
             }
 
+            if (DeepFloors.ByLabel(command) is DeepFloor road && DeepFloors.OpenFor(_hero).Contains(road))
+            {
+                _choosingFloor = false;
+                _hero.ActiveStoryNode = road.Id;
+                StartDungeonRun();
+                return;
+            }
+
             if (!int.TryParse(command, out int floor) || floor < 1 || floor >= EncounterTable.FinalQuestId)
             {
                 Say(FloorPrompt, MessageTone.Dim);
@@ -1022,7 +1125,19 @@ namespace ARDO.Game
             _pendingEvent = null;
             _guardianFaced = false;
             _fightingGuardian = false;
-            _run = new RunTally(_hero, quest?.Title ?? $"Floor {_hero.ActiveStoryNode}");
+            DeepFloor? deep = DeepFloors.Get(_hero.ActiveStoryNode);
+            _run = new RunTally(_hero, deep?.Title ?? quest?.Title ?? $"Floor {_hero.ActiveStoryNode}");
+
+            if (deep != null)
+            {
+                Say("");
+                Say($"You leave town and take the long stair down to {deep.Title}.");
+                foreach (string line in deep.Intro)
+                    Say(line, MessageTone.Dim);
+
+                StartNextDungeonEncounter();
+                return;
+            }
 
             Say("");
             Say(quest != null
@@ -1062,8 +1177,17 @@ namespace ARDO.Game
             Say("You fall to the dungeon floor, breath gone and vision dimming.", MessageTone.Damage);
             var summary = EndRunTally("Fell in the dark", always: true);
             Say("");
-            Say($"1 Rise again in Oakhaven ({RiseCost} gold)   2 Start a new hero");
-            Say("Starting a new hero erases this hero's save for good.", MessageTone.Warning);
+            if (_hero.HardMode)
+            {
+                // Hard mode: the save goes now, so quitting can't bring the hero back.
+                _playerRepo.DeleteProfile(_hero.CharacterId);
+                Say($"Hard mode: {_hero.Name} will not rise again. 2 Start a new hero", MessageTone.Warning);
+            }
+            else
+            {
+                Say($"1 Rise again in Oakhaven ({RiseCost} gold)   2 Start a new hero");
+                Say("Starting a new hero erases this hero's save for good.", MessageTone.Warning);
+            }
 
             var panel = new DefeatPanel(_hero, RiseCost, summary.Select(line => line.Text));
             panel.Decided += ResolveDefeat;
@@ -1097,6 +1221,12 @@ namespace ARDO.Game
         {
             if (CurrentState != GameState.DefeatPrompt)
                 return;
+
+            if (rise && _hero.HardMode)
+            {
+                Say("In hard mode the dead stay dead. Type 2 to start a new hero.", MessageTone.Dim);
+                return;
+            }
 
             if (_openPanel is DefeatPanel)
             {

@@ -37,6 +37,9 @@ namespace ARDO.Core.Abstracts
         // The turn of the wheel this enemy was made for (set when the fight starts).
         public int WheelTurn { get; set; }
 
+        // Everyone on its side of the fight, itself included (set by the combat engine).
+        public IReadOnlyList<Enemy> Allies { get; set; } = Array.Empty<Enemy>();
+
         // True while no blow can reach it (a witch gone to mist); attacks turn to another foe.
         public virtual bool Untouchable => false;
 
